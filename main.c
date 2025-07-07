@@ -4,12 +4,15 @@
 int parse_http_request_message(char *);
 
 int main() {
-    char test_data[10][1000] = {
-        "GET /index.html HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\n\r\n",
-        "GET /index.html HTTP/1.1\r\n",
-        "POST /users HTTP/2.0\r\n\r\nSome Body, idk"
+    char *test_data[10] = {
+        "GET /index.html HTTP/1.1\r\nHost: example.com\r\nConnection: close\r\n\r\n", // valid
+        "GET /index.html HTTP/1.1\r\n", // invalid
+        "POST /users HTTP/2.0\r\n\r\nSome Body, idk", // valid
+        "", // invalid
+        "PATCH /edit HTTP/1.1\r\n\r\nadjust=data", // valid
+        "GET /items/1 HTTP/1.1\r\nHost: site.com\r\n\r\n" // valid
     };
-    for (int i = 0; i < 3; ++i)
+    for (int i = 0; i < 6; ++i)
         parse_http_request_message(test_data[i]);
 }
 
