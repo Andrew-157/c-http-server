@@ -30,7 +30,6 @@ int main() {
 void parse_http_request_message(char *message) {
     /*
      * Assumptions for now:
-     * - Request line can contain more than one SP
      * - HTTP request without body must have one more CRLF, and the one with body may not have one
      * */
     // Trying to create some algorithm:
@@ -62,7 +61,7 @@ void parse_http_request_message(char *message) {
         }
     }
 
-    if (first_crlf_index < 0) {
+    if (first_crlf_index < 0) { // this error may actually be redundant
         printf("ERROR: CRLF is not found in message\n");
         return;
     }
@@ -98,6 +97,24 @@ void parse_http_request_message(char *message) {
     return;
 }
 
-static validate_request_line(char *) {
+static validate_request_line(char *request_line) {
+    // I am not sure what would be the proper way to pass the string here, I want to pass here
+    // a slice of the original request message, but that means I need to append '\0' to it before passing,
+    // so it is a proper string and strlen, for example, would work properly with it
+    // NOTE: I am allowing only 2 spaces in request line for now...until I read the RFC properly
+    // Divide string into: <METHOD>, <REQUEST-TARGET>, <PROTOCOL>
+    // NOTE: I'll need a function to validate whether requested url path is a valid one
+    char method[7];
+    char path[100];
+    char protocol[8];
+
+    char *entities[3]; // array to store method, path and protocol
+
+    int entities_index = 0;
+    int first_space = -1;
+    int second_space = -1;
+    for (int i = 0; request_line[i] < strlen(); ++i);
+    }
+
     return;
 }
