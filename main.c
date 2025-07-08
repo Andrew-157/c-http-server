@@ -1,8 +1,13 @@
 #include <stdio.h>
 #include <string.h>
 
-int parse_http_request_message(char *);
+#include "constants.h"
 
+void parse_http_request_message(char *);
+
+// data from all request line, headers and body will be probably needed in one single place, but for now I am moving validation
+// of each to a separate function
+static void validate_request_line(char *);
 
 int main() {
     char *test_data[10] = {
@@ -22,7 +27,7 @@ int main() {
 }
 
 
-int parse_http_request_message(char *message) {
+void parse_http_request_message(char *message) {
     /*
      * Assumptions for now:
      * - Request line can contain more than one SP
@@ -44,7 +49,7 @@ int parse_http_request_message(char *message) {
         if (message[i] == '\r') {
             if ((i+1) > message_len || message[i+1] != '\n') {
                 printf("ERROR: '\\r' is not followed by '\\n'\n");
-                return 1;
+                return;
             } else if (message[i+1] == '\n') {
                 if (first_crlf_index < 0)
                     first_crlf_index = i;
@@ -59,11 +64,11 @@ int parse_http_request_message(char *message) {
 
     if (first_crlf_index < 0) {
         printf("ERROR: CRLF is not found in message\n");
-        return 2;
+        return;
     }
     if (empty_line_crlf_index < 0) {
         printf("ERROR: message doesn't contain double CRLF\n");
-        return 3;
+        return;
     }
     //printf("Index of first CRLF: %d\n", first_crlf_index);
     //printf("Index of empty line CRLF: %d\n", empty_line_crlf_index);
@@ -90,5 +95,9 @@ int parse_http_request_message(char *message) {
     } else
         printf("DEBUG: Body is not present\n");
 
-    return 0;
+    return;
+}
+
+static validate_request_line(char *) {
+    return;
 }
