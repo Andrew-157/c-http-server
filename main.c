@@ -3,11 +3,9 @@
 
 #include "constants.h"
 
+
 void parse_http_request_message(char *);
 
-// data from all request line, headers and body will be probably needed in one single place, but for now I am moving validation
-// of each to a separate function
-static void validate_request_line(char *);
 
 int main() {
     char *test_data[10] = {
@@ -19,27 +17,10 @@ int main() {
         "GET /items/1 HTTP/1.1\r\nHost: site.com\r\n\r\n", // valid
         "POST /users HTTP/1.1\r\nHost: mywebsite.auth.com\r\nConnection: close\r\nContent-Type: application/json\r\n\r\n{\"user\":\n  {  \n\"password\": 1234\n}\n}"
     };
-    for (int i = 0; i < 7; ++i) {
-        printf("------------------------------------\n");
-        parse_http_request_message(test_data[i]);
-        printf("------------------------------------\n");
-    }
 }
 
 
 void parse_http_request_message(char *message) {
-    /*
-     * Assumptions for now:
-     * - HTTP request without body must have one more CRLF, and the one with body may not have one
-     * */
-    // Trying to create some algorithm:
-    // 1. Everything before the first CRLF is a Request line
-    // 2. Everything after CRLF x 2 is a body
-
-    // NOTE: Get indices of first CRLF and CRLF that is followed by one more CRLF, this way
-    // the request message can be divided
-    printf("%s\n", message);
-
     int first_crlf_index = -1;
     int empty_line_crlf_index = -1;
     int message_len = strlen(message);
@@ -56,12 +37,12 @@ void parse_http_request_message(char *message) {
                     empty_line_crlf_index = i;
                     break;
                 } else
-                  ++i; // We know that next char is \n
+                  ++i;
             }
         }
     }
 
-    if (first_crlf_index < 0) { // this error may actually be redundant
+    if (first_crlf_index < 0) {
         printf("ERROR: CRLF is not found in message\n");
         return;
     }
@@ -69,52 +50,7 @@ void parse_http_request_message(char *message) {
         printf("ERROR: message doesn't contain double CRLF\n");
         return;
     }
-    //printf("Index of first CRLF: %d\n", first_crlf_index);
-    //printf("Index of empty line CRLF: %d\n", empty_line_crlf_index);
-
-    // Now with found info print request line, headers and body
-    printf("DEBUG: Printing request line:\n");
-    for (int i = 0; i < first_crlf_index; ++i)
-        putchar(message[i]);
-    putchar('\n');
-
-    if (first_crlf_index != empty_line_crlf_index) {
-        printf("DEBUG: Printing headers:\n");
-        for (int i = (first_crlf_index+2); i < empty_line_crlf_index; ++i)
-            putchar(message[i]);
-        putchar('\n');
-    } else
-        printf("DEBUG: Headers are not present\n");
-
-    if (message[empty_line_crlf_index+4] != '\0') {
-        printf("DEBUG: Printing body:\n");
-        for (int i = (empty_line_crlf_index+4); message[i] != '\0'; ++i)
-            putchar(message[i]);
-        putchar('\n');
-    } else
-        printf("DEBUG: Body is not present\n");
 
     return;
 }
 
-static validate_request_line(char *request_line) {
-    // I am not sure what would be the proper way to pass the string here, I want to pass here
-    // a slice of the original request message, but that means I need to append '\0' to it before passing,
-    // so it is a proper string and strlen, for example, would work properly with it
-    // NOTE: I am allowing only 2 spaces in request line for now...until I read the RFC properly
-    // Divide string into: <METHOD>, <REQUEST-TARGET>, <PROTOCOL>
-    // NOTE: I'll need a function to validate whether requested url path is a valid one
-    char method[7];
-    char path[100];
-    char protocol[8];
-
-    char *entities[3]; // array to store method, path and protocol
-
-    int entities_index = 0;
-    int first_space = -1;
-    int second_space = -1;
-    for (int i = 0; request_line[i] < strlen(); ++i);
-    }
-
-    return;
-}
