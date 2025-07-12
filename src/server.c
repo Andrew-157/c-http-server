@@ -70,7 +70,7 @@ void func(int connfd) {
 
     // infinite loop for chat
     for (;;) {
-        bzero(buff, MAX);
+        bzero(buff, MAX); // why do we need to call that?
 
         // read message from client and copy it in buffer
         read(connfd, buff, sizeof(buff));
