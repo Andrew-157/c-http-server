@@ -1,94 +1,68 @@
 #include <stdio.h>
-#include <netdb.h>
-#include <netinet/in.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <unistd.h> // read(), write(), close()
+#include <unistd.h> // contains read, write, etc.
+#include <arpa/inet.h> // contains stuff for socket manipulations
 
-#define MAX 80
+#define BUFFER_SIZE 1024
 #define PORT 8080
-#define SA struct sockaddr
-
-// Function designed for chat between client and server.
-void func(int);
-
 
 int main() {
-    int sockfd, connfd, len;
-    struct sockaddr_in servaddr, cli;
+    int server_fd, client_fd; // file descriptors for server and client sockets
+    struct sockaddr_in address; // Describes an IPv4 Internet domain socket address. The sin_port and sin_addr members are stored in network byte order.
+    int opt = 1; // idk what that is
+    int addrlen = sizeof(address);
+    char buffer[BUFFER_SIZE];
 
-    // socket create and verification
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd == -1) {
-        printf("socket creation failed...\n");
-        exit(1);
-    } else
-        printf("Socket successfully created...\n");
-
-    bzero(&servaddr, sizeof(servaddr));
-
-    // assign IP, PORT
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(PORT);
-
-    // Binding newly created socket to given IP and verification
-    if ((bind(sockfd, (SA*)&servaddr, sizeof(servaddr))) != 0) {
-        printf("socket bind failed...\n");
-        exit(1);
-    } else
-      printf("Socket successfully binded...\n");
-
-    // Now server is ready to listen and verification
-    if ((listen(sockfd, 5)) != 0) {
-        printf("Listen failed...\n");
-        exit(2);
-    } else
-        printf("Server is listening...\n");
-    len = sizeof(cli);
-
-    // Accept the data packet from client and verification
-    connfd = accept(sockfd, (SA*)&cli, &len);
-    if (connfd < 0) {
-        printf("server accept failed...\n");
-        exit(3);
-    } else
-        printf("server accepted the client...\n");
-
-    // Function for chatting between client and server
-    func(connfd);
-
-    close(sockfd);
-}
-
-
-void func(int connfd) {
-    char buff[MAX];
-    int n;
-
-    // infinite loop for chat
-    for (;;) {
-        bzero(buff, MAX); // why do we need to call that?
-
-        // read message from client and copy it in buffer
-        read(connfd, buff, sizeof(buff));
-        // print buffer which contains the client contents
-        printf("From client: %s\t To client : ", buff);
-        bzero(buff, MAX);
-        n = 0;
-        // copy server message in the buffer
-        while ((buff[n++] = getchar()) != '\n')
-            ;
-
-        // and send that buffer to client
-        write(connfd, buff, sizeof(buff));
-
-        // if msg contains "Exit" then server exit and chat ended.
-        if (strncmp("exit", buff, 4) == 0) {
-            printf("Server Exit...\n");
-            break;
-        }
+    server_fd = socket(AF_INET, SOCK_STREAM, 0); // int socket(int domain, int type, int protocol);
+                                     // AF_INET - IPv4 Internet protocols
+                                     // SOCK_STREAM - TCP
+                                     // 0 - The protocol specifies a particular protocol to be used with the socket.  Normally only a single protocol exists to support a particular socket type within a given protocol family, in which case protocol can be specified as 0.
+    if (server_fd == -1) {
+        fprintf(stderr, "Server socket creation failed\n");
+        exit(EXIT_FAILURE);
     }
+
+    printf("Created server socket successfully\n");
+
+    // setting options on a socket
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) == -1) { // I am not completely sure what it is and why it is needed
+        fprintf(stderr, "Setting of socket options failed\n");
+        exit(EXIT_FAILURE);
+    }
+
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = htonl(INADDR_ANY); // Can I set it to 127.0.0.1?
+    address.sin_port = htons(PORT);
+
+    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) == -1) {
+        fprintf(stderr, "Server socket bind failed\n");
+        exit(EXIT_FAILURE);
+    }
+
+    if (listen(server_fd, 3) == -1) {
+        fprintf(stderr, "Listen failed\n");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Server is listening on %d\n", PORT);
+
+    client_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen); // Is this blocking call?
+    if (client_fd == -1) {
+        fprintf(stderr, "Failed to accept client connection\n");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Accepted client connection\n");
+
+    char http_response[] = "HTTP/1.1 200 OK\r\n\r\n";
+    write(client_fd, http_response, sizeof(http_response));
+    // ssize_t valread;
+    // while ((valread = read(client_fd, buffer, BUFFER_SIZE)) > 0) {
+    //    printf("Client: %s", buffer);
+    //    memset(buffer, 0, sizeof(buffer)); // memset vs bzero
+    //}
+
+    close(server_fd);
+    exit(0);
 }
