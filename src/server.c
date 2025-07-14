@@ -35,7 +35,7 @@ int main() {
     address.sin_addr.s_addr = htonl(INADDR_ANY); // Can I set it to 127.0.0.1?
     address.sin_port = htons(PORT);
 
-    if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) == -1) {
+    if (bind(server_fd, (struct sockaddr *)&address, addrlen) == -1) {
         fprintf(stderr, "Server socket bind failed\n");
         exit(EXIT_FAILURE);
     }
@@ -56,7 +56,7 @@ int main() {
     printf("Accepted client connection\n");
 
     char http_response[] = "HTTP/1.1 200 OK\r\n\r\n";
-    write(client_fd, http_response, sizeof(http_response));
+    write(client_fd, http_response, strlen(http_response));
     // ssize_t valread;
     // while ((valread = read(client_fd, buffer, BUFFER_SIZE)) > 0) {
     //    printf("Client: %s", buffer);
