@@ -8,16 +8,13 @@
 #define PORT 8080
 
 int main() {
-    int server_fd, client_fd; // file descriptors for server and client sockets
-    struct sockaddr_in address; // Describes an IPv4 Internet domain socket address. The sin_port and sin_addr members are stored in network byte order.
-    int opt = 1; // idk what that is
+    int server_fd, client_fd;
+    struct sockaddr_in address;
+    int opt = 1;
     int addrlen = sizeof(address);
     char buffer[BUFFER_SIZE];
 
-    server_fd = socket(AF_INET, SOCK_STREAM, 0); // int socket(int domain, int type, int protocol);
-                                     // AF_INET - IPv4 Internet protocols
-                                     // SOCK_STREAM - TCP
-                                     // 0 - The protocol specifies a particular protocol to be used with the socket.  Normally only a single protocol exists to support a particular socket type within a given protocol family, in which case protocol can be specified as 0.
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (server_fd == -1) {
         fprintf(stderr, "Server socket creation failed\n");
         exit(EXIT_FAILURE);
@@ -25,14 +22,13 @@ int main() {
 
     printf("Created server socket successfully\n");
 
-    // setting options on a socket
-    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) == -1) { // I am not completely sure what it is and why it is needed
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof(opt)) == -1) {
         fprintf(stderr, "Setting of socket options failed\n");
         exit(EXIT_FAILURE);
     }
 
     address.sin_family = AF_INET;
-    address.sin_addr.s_addr = htonl(INADDR_ANY); // Can I set it to 127.0.0.1?
+    address.sin_addr.s_addr = htonl(INADDR_ANY);
     address.sin_port = htons(PORT);
 
     if (bind(server_fd, (struct sockaddr *)&address, addrlen) == -1) {
@@ -43,25 +39,39 @@ int main() {
     if (listen(server_fd, 3) == -1) {
         fprintf(stderr, "Listen failed\n");
         exit(EXIT_FAILURE);
-    }
+    } else
+        printf("Server is listening on %d\n", PORT);
 
-    printf("Server is listening on %d\n", PORT);
-
-    client_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen); // Is this blocking call?
+    client_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
     if (client_fd == -1) {
         fprintf(stderr, "Failed to accept client connection\n");
         exit(EXIT_FAILURE);
     }
+    else
+        printf("Accepted client connection\n");
 
-    printf("Accepted client connection\n");
+    struct sockaddr_in client_address;
+    int client_address_len = sizeof(client_address);
+    getpeername(client_fd, (struct sockaddr *)&client_address, (socklen_t *)&client_address_len);
 
-    char http_response[] = "HTTP/1.1 200 OK\r\n\r\n";
-    write(client_fd, http_response, strlen(http_response));
-    // ssize_t valread;
-    // while ((valread = read(client_fd, buffer, BUFFER_SIZE)) > 0) {
-    //    printf("Client: %s", buffer);
-    //    memset(buffer, 0, sizeof(buffer)); // memset vs bzero
+    printf("Client data: %d, %u, %d\n", client_address.sin_family, client_address.sin_addr.s_addr, client_address.sin_port);
+
+    // TODO: handle saving data to buffer by adjust index or something like that, idk
+    ssize_t valread = read(client_fd, buffer, BUFFER_SIZE);
+    printf("Read from client socket %ld bytes of data: %s\n", valread, buffer);
+    memset(buffer, 0, sizeof(buffer));
+
+    // NOTE: This loop doesn't work
+    //ssize_t valread;
+    //while ((valread = read(client_fd, buffer, BUFFER_SIZE)) > 0) {
+    //    printf("Received from client %ld bytes with data: %s\n", valread, buffer);
+    //    memset(buffer, 0, sizeof(buffer));
     //}
+
+    // TODO: handle writing to socket until all the data was written
+    char http_response[] = "HTTP/1.1 200 OK\r\n\r\n";
+    ssize_t valwritten = write(client_fd, http_response, strlen(http_response));
+    printf("Written bytes %ld vs expected written bytes %ld\n", valwritten, strlen(http_response));
 
     close(server_fd);
     exit(0);
