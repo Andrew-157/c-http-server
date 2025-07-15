@@ -57,21 +57,46 @@ int main() {
     printf("Client data: %d, %s, %d\n", client_address.sin_family, inet_ntoa(client_address.sin_addr), client_address.sin_port);
 
     // TODO: handle saving data to buffer by adjust index or something like that, idk
-    ssize_t valread = read(client_fd, buffer, BUFFER_SIZE);
+    ssize_t valread = read(client_fd, buffer, BUFFER_SIZE); // Waaaait, what if BUFFER SIZE is not enough for what client sent me?
     printf("Read from client socket %ld bytes of data: %s\n", valread, buffer);
-    memset(buffer, 0, sizeof(buffer));
+    memset(buffer, 0, strlen(buffer));
 
     // NOTE: This loop doesn't work
     //ssize_t valread;
+    // Most likely the problem is that read TRIES to read whole BUFFER_SIZE
     //while ((valread = read(client_fd, buffer, BUFFER_SIZE)) > 0) {
     //    printf("Received from client %ld bytes with data: %s\n", valread, buffer);
     //    memset(buffer, 0, sizeof(buffer));
     //}
 
     // TODO: handle writing to socket until all the data was written
-    char http_response[] = "HTTP/1.1 200 OK\r\n\r\n";
+    char http_response[] = "HTTP/1.1 200 OK\r\n\\"
+                           "Content-Type: text/html\r\n"
+                           "Content-Length: 97\r\n"
+                           "Connection: close\r\n"
+                           "\r\n"
+                           "<!DOCTYPE html>"
+                           "<html>"
+                           "<head><title>Minimal HTML</title></head>"
+                           "<body>Hello, world!</body>"
+                           "</html>";
     ssize_t valwritten = write(client_fd, http_response, strlen(http_response));
     printf("Written bytes %ld vs expected written bytes %ld\n", valwritten, strlen(http_response));
+
+    // Try to write to client socket in chunks - WORKS!
+    //char first_part[] = "HTTP/1.1 200";
+    //char second_part[] = " OK\r\n\r\n";
+    //write(client_fd, first_part, strlen(first_part));
+    //write(client_fd, second_part, strlen(second_part));
+
+    // For some reason before client socket can be closed, to make client receive response properly, I either need to:
+    // - sleep
+
+    sleep(1);
+
+    //read(client_fd, buffer, BUFFER_SIZE);
+    //printf("Read from client socket again: %s\n", buffer);
+    //memset(buffer, 0, strlen(buffer));
 
     close(server_fd);
     exit(0);
