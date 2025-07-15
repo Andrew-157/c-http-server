@@ -54,7 +54,7 @@ int main() {
     int client_address_len = sizeof(client_address);
     getpeername(client_fd, (struct sockaddr *)&client_address, (socklen_t *)&client_address_len);
 
-    printf("Client data: %d, %u, %d\n", client_address.sin_family, client_address.sin_addr.s_addr, client_address.sin_port);
+    printf("Client data: %d, %s, %d\n", client_address.sin_family, inet_ntoa(client_address.sin_addr), client_address.sin_port);
 
     // TODO: handle saving data to buffer by adjust index or something like that, idk
     ssize_t valread = read(client_fd, buffer, BUFFER_SIZE);
