@@ -24,7 +24,6 @@ int main() {
     char s[INET_ADDRSTRLEN];
     int rv;
 
-
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET; // Could be AF_UNSPEC, to be IP version agnostic
     hints.ai_socktype = SOCK_STREAM; // TCP
@@ -82,15 +81,18 @@ int main() {
     }
 
     inet_ntop(their_addr.sin_family, &their_addr.sin_addr, s, sizeof(s));
-    printf("server: got connection from %s\n", s);
+    printf("server: got connection from IP: %s PORT: %d\n", s, their_addr.sin_port);
 
     char message[RCV_MSG_BUFFER];
     if (recv(new_fd, message, RCV_MSG_BUFFER, 0) == -1) // 0 is returned when client closes connection
         perror("recv error");
 
     printf("Recevived message from client:\n\n");
-
     printf("%s\n", message);
+
+    printf("Writing to client minimal HTTP response\n");
+    char *response = "HTTP/1.1 200 OK\r\n\r\n";
+    send(new_fd, response, strlen(response), 0);
 
     printf("Ending communication\n");
     close(new_fd);
