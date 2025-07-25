@@ -10,17 +10,20 @@
 #include <arpa/inet.h>
 
 
-#define PORT 80
+#define PORT "8080"
 #define BACKLOG 10 // Right now I can do absolutely nothing with that, but just so I know about that param
+#define RCV_MSG_BUFFER 1024
 
 
 int main() {
 
     int sockfd, new_fd;
     socklen_t sin_size;
-    struct sockaddr_storage their_addr;
+    struct sockaddr_in their_addr;
     struct addrinfo hints, *servinfo, *p;
     char s[INET_ADDRSTRLEN];
+    int rv;
+
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET; // Could be AF_UNSPEC, to be IP version agnostic
@@ -28,7 +31,7 @@ int main() {
     hints.ai_flags = AI_PASSIVE; // Use my IP
 
     if ((rv = getaddrinfo(NULL, PORT, &hints, &servinfo)) != 0) {
-        fprintf(stderr, "getaddrinfo: %s\n", gaierror(rv));
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
         exit(errno);
     }
 
@@ -48,7 +51,7 @@ int main() {
 
         if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
             close(sockfd);
-            perror("server: bind");
+            perror("server: bind"); // server: bind: Permission denied - when using port 80, for example
             continue;
         }
 
@@ -72,15 +75,25 @@ int main() {
     // There are 10 BACKLOG connections, but I am accepting only one for now,
     // moreover, it means that after accepting one client socket, I can close server socket
     sin_size = sizeof their_addr;
-    new_fd = accept(sockfd, (struct sockaddr *)their_addr, &sin_size);
+    new_fd = accept(sockfd, (struct sockaddr *)&their_addr, &sin_size);
     if (new_fd == -1) {
         perror("accept");
-        continue;
+        exit(errno);
     }
 
-    inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof(s));
+    inet_ntop(their_addr.sin_family, &their_addr.sin_addr, s, sizeof(s));
     printf("server: got connection from %s\n", s);
 
+    char message[RCV_MSG_BUFFER];
+    if (recv(new_fd, message, RCV_MSG_BUFFER, 0) == -1) // 0 is returned when client closes connection
+        perror("recv error");
 
+    printf("Recevived message from client:\n\n");
+
+    printf("%s\n", message);
+
+    printf("Ending communication\n");
+    close(new_fd);
+    close(sockfd);
 
 }
