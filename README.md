@@ -9,3 +9,6 @@ TODO:
 - Add a client to be able to simulate sending chunked requests, requests of wrong format, etc.
 - Trying writing response in 2 calls to write
 
+Open Questions:
+
+- How to read from socket, I mean for how long? Is just calling `recv` until it returns 0 enough?
