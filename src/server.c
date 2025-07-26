@@ -87,12 +87,34 @@ int main() {
     if (recv(new_fd, message, RCV_MSG_BUFFER, 0) == -1) // 0 is returned when client closes connection
         perror("recv error");
 
-    printf("Recevived message from client:\n\n");
+    printf("Received message from client:\n\n");
     printf("%s\n", message);
 
     printf("Writing to client minimal HTTP response\n");
-    char *response = "HTTP/1.1 200 OK\r\n\r\n";
-    send(new_fd, response, strlen(response), 0);
+    //char *response = "HTTP/1.1 200 OK\r\n\r\n";
+    //send(new_fd, response, strlen(response), 0);
+
+    // Putting HTML template into a string
+    char *template_path = "./templates/index.html";
+    FILE *file;
+    file = fopen(template_path, "r");
+    fseek(file, 0, SEEK_END); // Moves file pointer to the end of the file
+    int length = ftell(file);
+    fseek(file, 0, SEEK_SET); // Moves file pointer back to the beginning of the file
+
+    char *html = malloc(sizeof(char) * (length+1)); // length + 1 because '\0'
+    int c;
+    int i = 0;
+    while ((c = getc(file)) != EOF) // could be fgetc instead of getc
+        html[i++] = c;
+    html[i] = '\0';
+
+    fclose(file);
+    char *http_response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 232\r\n\r\n";
+    send(new_fd, http_response, strlen(http_response), 0);
+    send(new_fd, html, length, 0);
+
+    free(html);
 
     printf("Ending communication\n");
     close(new_fd);
