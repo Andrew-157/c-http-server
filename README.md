@@ -23,7 +23,7 @@
 
 ## Inside a Virtual Machine
 
-I have a Fedora 42 server libvirt VM on my host(I have virtual switch running in default `NAT` mode). To be able to run the HTTP server inside the VM and to be able to connect to the server from hypervisor(host), the port on which the server is running needs to be first opened on firewall. Check first if port is already opened inside the VM with:
+I have a Fedora 42 server libvirt VM on my host(I have virtual switch running in default `NAT` mode). To be able to run the HTTP server inside the VM and to be able to connect to the server from hypervisor(host), the port on which the server is running needs to be first opened on firewall(inside VM). Check first if port is already opened inside the VM with:
 
 ```bash
 root@fedora-server:~# firewall-cmd --list-all
