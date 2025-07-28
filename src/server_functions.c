@@ -57,9 +57,9 @@ static char * read_rcv_msg(int client_sockfd) {
     char *rcv_msg = malloc(sizeof(char) * RCV_MSG_BUFFER);
     if (recv(client_sockfd, rcv_msg, RCV_MSG_BUFFER, 0) == -1) // 0 is returned when client closes the connection
         perror("recv error");
+    // We should append '\0' at the end
     return rcv_msg;
 }
-
 
 static int create_server_socket(const char *port, int backlog) {
     int sockfd;
