@@ -9,12 +9,39 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-#define PORT "8080"
+#include "default_config.h"
 
 // return type could be `void *`, but I need to check that
 static struct sockaddr_in * cast_structs(struct sockaddr *p);
 
-int main() {
+int main(int argc, char **argv) {
+
+    const char *help_text = "Usage: client [OPTIONS]\n\
+A simple TCP client program.\n\
+Options:\n\
+  -n, --host <HOST>       Specify the host which to connect to - hostname or IPv4 IP address. If not provided \"%s\" will be used.\n\
+  -h, --help              Display this help message and exit.\n\
+";
+    char *host; // TODO: allow passing port too
+    if (argc > 1) {
+        char *option = argv[1];
+        if (strcmp(option, "-h") == 0 || strcmp(option, "--help") == 0) {
+            printf(help_text, HOST);
+            exit(0);
+        } else if (strcmp(option, "-n") == 0 || strcmp(option, "--host") == 0) {
+            if (argc < 3) {
+                printf("-n/--host option used without a value.\n");
+                exit(1);
+            }
+            host = argv[2];
+        }
+        else {
+           printf("Invalid option %s, use -h/--help to see all supported options.\n", argv[1]);
+           exit(1);
+        }
+    } else
+       host = HOST;
+
     int sockfd;
     struct addrinfo hints, *servinfo, *p;
     int rv;
@@ -24,7 +51,7 @@ int main() {
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
 
-    if ((rv = getaddrinfo("localhost", PORT, &hints, &servinfo)) != 0) {
+    if ((rv = getaddrinfo(host, PORT, &hints, &servinfo)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
         exit(errno);
     }
