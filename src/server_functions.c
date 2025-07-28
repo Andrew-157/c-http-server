@@ -14,6 +14,7 @@
 
 static int create_server_socket(const char *port, int backlog);
 static char *read_template(char *template_path);
+static char *read_rcv_msg(int client_sockfd);
 
 void run() {
     int server_sockfd, client_sockfd;
@@ -34,12 +35,10 @@ void run() {
     inet_ntop(client_address.sin_family, &client_address.sin_addr, printable_ip, sizeof(printable_ip));
     printf("server: accepted connection from %s:%d\n", printable_ip, ntohs(client_address.sin_port));
 
-    char rcv_msg[RCV_MSG_BUFFER];
-    if (recv(client_sockfd, rcv_msg, RCV_MSG_BUFFER, 0) == -1) // 0 is returned when client closes the connection
-        perror("recv error");
-
+    char *rcv_msg = read_rcv_msg(client_sockfd);
     printf("Received message from client:\n");
     printf("%s", rcv_msg);
+    free(rcv_msg);
 
     printf("Sending an HTML template to client\n");
 
@@ -53,6 +52,14 @@ void run() {
     close(client_sockfd);
     close(server_sockfd);
 }
+
+static char * read_rcv_msg(int client_sockfd) {
+    char *rcv_msg = malloc(sizeof(char) * RCV_MSG_BUFFER);
+    if (recv(client_sockfd, rcv_msg, RCV_MSG_BUFFER, 0) == -1) // 0 is returned when client closes the connection
+        perror("recv error");
+    return rcv_msg;
+}
+
 
 static int create_server_socket(const char *port, int backlog) {
     int sockfd;
