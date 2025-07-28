@@ -3,6 +3,7 @@
 ## Table of Contents
 - [How To Read HTTP Request from Socket](#how-to-read-http-request-from-socket)
 - [Inside a Virtual Machine](#inside-a-virtual-machine)
+- [Client For Testing](#client-for-testing)
 - [Future Features To Be Implemented](#future-features-to-be-implemented)
 
 ---
@@ -78,6 +79,12 @@ After this, it will be possible to connect to the HTTP server running inside the
 References:
 
 - [https://www.digitalocean.com/community/tutorials/opening-a-port-on-linux](https://www.digitalocean.com/community/tutorials/opening-a-port-on-linux)
+
+---
+
+## Client For Testing
+
+TODO
 
 ---
 
