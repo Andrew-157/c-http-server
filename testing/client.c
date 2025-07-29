@@ -86,21 +86,27 @@ Options:\n\
 
     freeaddrinfo(servinfo);
 
-    char *msg_to_server = "Hey, Server!\r\n";
-    if (send(sockfd, msg_to_server, strlen(msg_to_server), 0) == -1) {
-        perror("client: send");
-        exit(errno);
-    }
+    printf("Not sending anything to server to see how it behaves\n");
 
-    char rcv_msg[1024];
-    int bytes_received;
-    if ((bytes_received = recv(sockfd, rcv_msg, 1024, 0)) == -1) {
-        perror("cliend: recv");
-        exit(errno);
-    }
+    //int sleep_time = 10;
+    //printf("Sleeping for %ds\n", sleep_time);
+    //sleep(sleep_time);
 
-    rcv_msg[bytes_received] = '\0';
-    printf("Received msg from server:\n%s\n", rcv_msg);
+    //char *msg_to_server = "Hey, Server!\r\n";
+    //if (send(sockfd, msg_to_server, strlen(msg_to_server), 0) == -1) {
+    //    perror("client: send");
+    //    exit(errno);
+    //}
+
+    //char rcv_msg[1024];
+    //int bytes_received;
+    //if ((bytes_received = recv(sockfd, rcv_msg, 1024, 0)) == -1) {
+    //    perror("cliend: recv");
+    //    exit(errno);
+   // }
+
+    //rcv_msg[bytes_received] = '\0';
+    //printf("Received msg from server:\n%s\n", rcv_msg);
 
     close(sockfd);
 

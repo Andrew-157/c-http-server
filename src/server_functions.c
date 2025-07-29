@@ -35,29 +35,50 @@ void run() {
     inet_ntop(client_address.sin_family, &client_address.sin_addr, printable_ip, sizeof(printable_ip));
     printf("server: accepted connection from %s:%d\n", printable_ip, ntohs(client_address.sin_port));
 
+    printf("Receiving data from client\n");
+
     char *rcv_msg = read_rcv_msg(client_sockfd);
-    printf("Received message from client:\n");
-    printf("%s", rcv_msg);
-    free(rcv_msg);
+    if (rcv_msg == NULL) {
+        printf("Client either closed the connection or error on read occured\n");
+        printf("Ending communication\n");
+        close(client_sockfd);
+        close(server_sockfd);
+    } else {
+        printf("Received message from client:\n");
+        printf("%s", rcv_msg);
+        free(rcv_msg);
 
-    printf("Sending an HTML template to client\n");
+        printf("Sending an HTML template to client\n");
 
-    char *http_response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 232\r\n\r\n";
-    char *html = read_template("./templates/index.html");
-    send(client_sockfd, http_response, strlen(http_response), 0);
-    send(client_sockfd, html, strlen(html), 0);
-    free(html);
+        char *http_response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 232\r\n\r\n";
+        char *html = read_template("./templates/index.html");
+        send(client_sockfd, http_response, strlen(http_response), 0);
+        send(client_sockfd, html, strlen(html), 0);
+        free(html);
 
-    printf("Ending communication\n");
-    close(client_sockfd);
-    close(server_sockfd);
+        printf("Ending communication\n");
+        close(client_sockfd);
+        close(server_sockfd);
+    }
 }
 
 static char * read_rcv_msg(int client_sockfd) {
-    char *rcv_msg = malloc(sizeof(char) * RCV_MSG_BUFFER);
-    if (recv(client_sockfd, rcv_msg, RCV_MSG_BUFFER, 0) == -1) // 0 is returned when client closes the connection
+    // this string and its size should be growing in a loop depending on how much data we received
+    // from client I think, or we can allocate in advance if we know max size for the headers and
+    // request line, but what about the body?
+    char *rcv_msg = malloc(sizeof(char) * RCV_MSG_BUFFER); // this is to be able to return string from function
+    int bytes_received;
+    bytes_received = recv(client_sockfd, rcv_msg, RCV_MSG_BUFFER, 0);
+    if (bytes_received == 0) { // as i understand, 0 is returned when client closes connection, which means there is no point to try to communicate anymore
+        printf("Client closed the connection\n");
+        free(rcv_msg);
+        return NULL;
+    } else if (bytes_received == -1) {
         perror("recv error");
-    // We should append '\0' at the end
+        free(rcv_msg);
+        return NULL;
+    }
+    rcv_msg[bytes_received] = '\0';
     return rcv_msg;
 }
 
