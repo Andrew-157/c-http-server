@@ -111,6 +111,9 @@ static int create_server_socket(const char *port, int backlog) {
         }
 
         // TODO: setsockopt SO_RCVTIMEO - seconds and microsecond should be passed via parameters
+        // NOTE: SO_RCVTIMEO sets timeout on ALL input functions as I understand, so if you set it
+        // on server socket, the timeout will be on accept too, for example(I would like to test it),
+        // so if you want to set timeout on recv, you need to setsockopt SO_RCVTIMEO on client socket
 
         if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
             close(sockfd);
