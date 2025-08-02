@@ -37,7 +37,7 @@ int main() {
             continue;
         }
 
-        // SO_REUSEADDR allows to avoid "Address already in use" erro
+        // SO_REUSEADDR allows to avoid "Address already in use" error
         int yes = 1;
         if (setsockopt(server_sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
             close(server_sockfd);
