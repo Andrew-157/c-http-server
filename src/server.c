@@ -81,8 +81,15 @@ int main() {
 
     printf("Sending an HTTP response to client with HTML body\n");
 
-    char *http_response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 232\r\n\r\n";
     char *html = read_template("./templates/index.html");
+    if (html == NULL) {
+        fprintf(stderr, "failed to open html template: %s\n", strerror(errno));
+        close(client_sockfd);
+        close(server_sockfd);
+        exit(errno);
+    }
+
+    char *http_response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 232\r\n\r\n";
     send(client_sockfd, http_response, strlen(http_response), 0);
     send(client_sockfd, html, strlen(html), 0);
     free(html);
@@ -142,7 +149,7 @@ int create_server_socket(char *port) {
 
 char *read_template(char *template_path) {
     FILE *file;
-    file = fopen(template_path, "r");
+    if ((file = fopen(template_path, "r")) == NULL) return NULL;
     fseek(file, 0, SEEK_END); // Moves file pointer to the end of the file
     int length = ftell(file);
     fseek(file, 0, SEEK_SET); // Moves file pointer back to the beginning of the file
