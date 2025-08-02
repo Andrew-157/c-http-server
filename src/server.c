@@ -86,6 +86,13 @@ int main() {
         exit(errno);
     }
 
+    /* If after 5 seconds, client doesn't send data, `recv` will fail with "recv: Resource temporarily unavailable"
+    struct timeval timeout;
+    timeout.tv_sec = 5;
+    timeout.tv_usec = 0;
+    setsockopt(client_sockfd, SOL_SOCKET, SOL_RCVTIMEO, &timeout, sizeof(timeout));
+    */
+
     inet_ntop(client_address.sin_family, &client_address.sin_addr, printable_ip, sizeof(printable_ip));
     printf("server: accepted connection from %s:%d\n", printable_ip, ntohs(client_address.sin_port));
 
