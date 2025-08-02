@@ -88,9 +88,9 @@ Options:\n\
 
     printf("Not sending anything to server to see how it behaves\n");
 
-    //int sleep_time = 10;
-    //printf("Sleeping for %ds\n", sleep_time);
-    //sleep(sleep_time);
+    int sleep_time = 10;
+    printf("Sleeping for %ds\n", sleep_time);
+    sleep(sleep_time);
 
     //char *msg_to_server = "Hey, Server!\r\n";
     //if (send(sockfd, msg_to_server, strlen(msg_to_server), 0) == -1) {
