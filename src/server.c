@@ -9,11 +9,9 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
-
 #define PORT               "8080" // server port
 #define BACKLOG            10     // number of pending connections
 #define RECV_MSG_BUFFER    1024   // buffer size for recv method
-
 
 int main() {
     int server_sockfd, client_sockfd;
@@ -46,6 +44,17 @@ int main() {
             perror("server: setsockopt");
             continue;
         }
+
+        /* If after 5 seconds no client connects, `accept` fails on "Resource temporarily unavailable"
+        struct timeval timeout;
+        timeout.tv_sec = 5;
+        timeout.tv_usec = 0;
+        if (setsockopt(server_sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == -1) {
+            close(server_sockfd);
+            perror("server: setsockopt");
+            continue;
+        }
+        */
 
         if (bind(server_sockfd, p->ai_addr, p->ai_addrlen) == -1) {
             close(server_sockfd);
