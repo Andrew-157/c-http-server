@@ -15,6 +15,7 @@
 
 int create_server_socket(char *port);
 char *read_template(char *template_path);
+void accept_rqst(int client_sockfd, int recv_msg_buffer, int rqst_line_headers_size, int body_size);
 
 int main() {
     int server_sockfd;
@@ -162,4 +163,14 @@ char *read_template(char *template_path) {
     html[i] = '\0';
     fclose(file);
     return html;
+}
+
+/*
+ * Read from client socket and ...I don't yet
+ * - client sockfd (int) - client socket to read from,
+ * - recv_msg_buffer (int) - buffer size in bytes for reading client socket using `recv`,
+ * - rqst_line_headers_size (int) - maximum size in bytes of request line + header lines,
+ * - body_size (int) - maximum size of request body in bytes
+ */
+void accept_rqst(int client_sockfd, int recv_msg_buffer, int rqst_line_headers_size, int body_size) {
 }
