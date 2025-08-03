@@ -47,7 +47,7 @@ int main() {
 
     // timeout on `recv`
     struct timeval timeout;
-    timeout.tv_sec = 5;
+    timeout.tv_sec = 1; // even 1 second is a lot probably
     timeout.tv_usec = 0;
     if (setsockopt(client_sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == -1) {
         close(client_sockfd);
