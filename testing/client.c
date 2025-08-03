@@ -51,7 +51,7 @@ Options:\n\
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
 
-    if ((rv = getaddrinfo(host, PORT, &hints, &servinfo)) != 0) {
+    if ((rv = getaddrinfo(host, "8081", &hints, &servinfo)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
         exit(errno);
     }

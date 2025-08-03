@@ -13,9 +13,9 @@
 #define BACKLOG         10     // maximum number of pending connections
 #define RECV_MSG_BUFFER 1024   // recv buffer
 
-int create_server_socket(char *port);
-char *read_template(char *template_path);
-void accept_rqst(int client_sockfd, int recv_msg_buffer, int rqst_line_headers_size, int body_size);
+int create_server_socket(char *);
+char *read_template(char *);
+void accept_rqst(int, int, unsigned long, unsigned long long);
 
 int main() {
     int server_sockfd;
@@ -50,8 +50,8 @@ int main() {
     timeout.tv_sec = 5;
     timeout.tv_usec = 0;
     if (setsockopt(client_sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == -1) {
-        close(server_sockfd);
         close(client_sockfd);
+        close(server_sockfd);
         fprintf(stderr, "setsockopt: %s\n", strerror(errno));
         exit(errno);
     }
@@ -166,11 +166,28 @@ char *read_template(char *template_path) {
 }
 
 /*
- * Read from client socket and ...I don't yet
+ * Read from client socket and ... I don't know yet
  * - client sockfd (int) - client socket to read from,
  * - recv_msg_buffer (int) - buffer size in bytes for reading client socket using `recv`,
- * - rqst_line_headers_size (int) - maximum size in bytes of request line + header lines,
- * - body_size (int) - maximum size of request body in bytes
+ * - rqst_line_headers_size (unsigned long) - maximum size in bytes of request line + header lines,
+ * - body_size (unsigned long long) - maximum size of request body in bytes
  */
-void accept_rqst(int client_sockfd, int recv_msg_buffer, int rqst_line_headers_size, int body_size) {
+void accept_rqst(int client_sockfd, int recv_msg_buffer, unsigned long rqst_line_headers_size, unsigned long long body_size) {
+    int recv_retries; // maximum amount of times `recv` function will be called in attempt to receive full HTTP message
+    char recv_msg[recv_msg_buffer];
+    int bytes_received;
+
+    recv_retries = (int)((rqst_line_headers_size + body_size) / recv_msg_buffer) + 1;
+    /* recv_retries:
+     * The maximum amount of times we should read from socket is:
+     * (Maximum size of request lines and header lines + maximum size of body / `recv` msg buffer size) + 1
+     * `+1` because after we read the maximum amount of data we can read, we still need to know if client
+     * keeps sending more, so instead of trying to parse not complete(from point of view of client, because they didn't
+     * send everything they wanted) http request, we should inform client that message is too large (response 413 status code should do)
+     */
+
+    while (recv_retries > 0) {
+        bytes_received = recv(client_sockfd, recv_msg, recv_msg_buffer, 0);
+        retries--;
+    }
 }
