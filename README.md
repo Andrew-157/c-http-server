@@ -92,7 +92,7 @@ TODO
 
 - **Implement logger**  
   Log to `stdout` and to `/var/log/<somefile.log>`.
-  
+
 - **Implement server configuration**  
   Allow choosing server port via CLI, a configuration file, or both.
   
@@ -101,3 +101,7 @@ TODO
   - Chunked requests  
   - Requests of wrong format, etc.
 
+- **Add scripts for building container image with this HTTP server**
+  - Containerfile
+  - Dockerfile
+  - buildah script
