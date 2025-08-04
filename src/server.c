@@ -173,21 +173,32 @@ char *read_template(char *template_path) {
  * - body_size (unsigned long long) - maximum size of request body in bytes
  */
 void accept_rqst(int client_sockfd, int recv_msg_buffer, unsigned long rqst_line_headers_size, unsigned long long body_size) {
-    int recv_retries; // maximum amount of times `recv` function will be called in attempt to receive full HTTP message
-    char recv_msg[recv_msg_buffer];
-    int bytes_received;
+    //int recv_retries; // maximum amount of times `recv` function will be called in attempt to receive full HTTP message
+    // Rethink that: recv_retries = (int)((rqst_line_headers_size + body_size) / recv_msg_buffer) + 1;
+   char recv_msg[recv_msg_buffer];
+    int bytes_received, rqst_line_bytes, headers_bytes, body_bytes;
 
-    recv_retries = (int)((rqst_line_headers_size + body_size) / recv_msg_buffer) + 1;
-    /* recv_retries:
-     * The maximum amount of times we should read from socket is:
-     * (Maximum size of request lines and header lines + maximum size of body / `recv` msg buffer size) + 1
-     * `+1` because after we read the maximum amount of data we can read, we still need to know if client
-     * keeps sending more, so instead of trying to parse not complete(from point of view of client, because they didn't
-     * send everything they wanted) http request, we should inform client that message is too large (response 413 status code should do)
-     */
+    // Check how many bytes of everything we received
+    rqst_line_bytes = 0;
+    headers_bytes = 0;
+    body_bytes = 0;
 
-    while (recv_retries > 0) {
+    int rqst_line_received, headers_received, body_received;
+
+    int msg_complete = 0;
+    while (!msg_complete) {
         bytes_received = recv(client_sockfd, recv_msg, recv_msg_buffer, 0);
-        retries--;
+        if not rqst_line_received {
+            rqst_line_bytes += bytes_received;
+        } else if (not headers_received) {
+            headers_bytes += bytes_received;
+        } else if (not body_received) {
+            // we can catch that early when reading Content-Length header, but
+            // - what if this header is absent - if this is the method that needs body, then we need to return error
+            // - what if actual body size is not equal to what is set in header, we could simply stop reading after Content-Length value
+            // was received, but it is not very good to operate on not complete data, and may leave, for example,
+            // some broken database record
+            body_received += bytes_received;
+        }
     }
 }
