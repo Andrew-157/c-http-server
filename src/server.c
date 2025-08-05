@@ -202,13 +202,13 @@ void accept_rqst(int client_sockfd, int recv_msg_buffer, unsigned long max_rqst_
                  // Return Error to client "413 Entity Too Large"
                  break;
             }
-        } else if (not headers_received) {
+        } else if (!headers_received) {
             headers_bytes_received += bytes_received;
             if ((rqst_line_bytes_received + headers_bytes_received) > max_rqst_line_headers_size) {
                 // Return error to client "413 Entity Too Large"
                 break;
             }
-        } else if (not body_received) {
+        } else if (!body_received) {
             // we can catch that early when reading Content-Length header, but
             // - what if this header is absent - if this is the method that needs body, then we need to return error
             // - what if actual body size is not equal to what is set in header, we could simply stop reading after Content-Length value
