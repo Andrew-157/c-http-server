@@ -9,24 +9,61 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-#include "default_config.h"
+#define HOST "localhost"
+#define PORT "8080"
 
+struct cli_data {
+    char *host;
+    char *port;
+};
+
+static struct cli_data cli(int, char **);
 // return type could be `void *`, but I need to check that
-static struct sockaddr_in * cast_structs(struct sockaddr *p);
+static struct sockaddr_in * cast_structs(struct sockaddr *);
+static int create_socket(char *, char *);
 
 int main(int argc, char **argv) {
+    struct cli_data data = cli(argc, argv);
+    int sockfd;
+    sockfd = create_socket(data.host, data.port);
 
+    char *send_msg = "GET / HTTP/1.1\r\n\r\n";
+    if (send(sockfd, send_msg, strlen(send_msg), 0) == -1) {
+        close(sockfd);
+        fprintf(stderr, "send: %s\n", strerror(errno));
+        exit(errno);
+    }
+
+    char recv_msg[1024];
+    int bytes_received;
+    if ((bytes_received = recv(sockfd, recv_msg, sizeof(recv_msg), 0)) == -1) {
+        close(sockfd);
+        fprintf(stderr, "recv: %s\n", strerror(errno));
+        exit(errno);
+    }
+
+    recv_msg[bytes_received] = '\0';
+    printf("Received msg from server:\n%s\n", recv_msg);
+
+    close(sockfd);
+
+}
+
+static struct cli_data cli(int argc, char **argv) {
     const char *help_text = "Usage: client [OPTIONS]\n\
 A simple TCP client program.\n\
 Options:\n\
   -n, --host <HOST>       Specify the host which to connect to - hostname or IPv4 IP address. If not provided \"%s\" will be used.\n\
+  -p, --port <PORT>       Specify the port to which to connect to. If not provided \"%s\" will be used.\n\
   -h, --help              Display this help message and exit.\n\
 ";
-    char *host; // TODO: allow passing port too
+    char *host = NULL;
+    char *port = NULL;
+    // TODO: This is hell, you can do something better
     if (argc > 1) {
         char *option = argv[1];
         if (strcmp(option, "-h") == 0 || strcmp(option, "--help") == 0) {
-            printf(help_text, HOST);
+            printf(help_text, HOST, PORT);
             exit(0);
         } else if (strcmp(option, "-n") == 0 || strcmp(option, "--host") == 0) {
             if (argc < 3) {
@@ -34,40 +71,87 @@ Options:\n\
                 exit(1);
             }
             host = argv[2];
+        } else if (strcmp(option, "-p") == 0 || strcmp(option, "--port") == 0) {
+            if (argc < 3) {
+                printf("-p/--port option used without a value.\n");
+                exit(1);
+            }
+            port = argv[2];
+        } else {
+            printf("Invalid option %s was used, see -h/--help.\n", argv[1]);
+            exit(1);
         }
-        else {
-           printf("Invalid option %s, use -h/--help to see all supported options.\n", argv[1]);
-           exit(1);
+        option = argv[3];
+        if (argc > 3) {
+            if (strcmp(option, "-n") == 0 || strcmp(option, "--host") == 0) {
+                if (host != NULL) {
+                    printf("-n/--host option provided twice.\n");
+                    exit(1);
+                }
+                if (argc < 4) {
+                    printf("-n/--host option used without a value.\n");
+                    exit(1);
+                }
+                host = argv[4];
+            } else if (strcmp(option, "-p") == 0 || strcmp(option, "--port") == 0) {
+                if (port != NULL) {
+                    printf("-p/--port option provided twice.\n");
+                    exit(1);
+                }
+                if (argc < 4) {
+                    printf("-p/--port option used without a value.\n");
+                    exit(1);
+                }
+                port = argv[4];
+            } else {
+                printf("Invalid option %s was used, see -h/--help.\n", argv[3]);
+                exit(1);
+            }
         }
-    } else
-       host = HOST;
+    } else {
+        host = HOST;
+        port = PORT;
+    }
 
+    if (host == NULL) host = HOST;
+    if (port == NULL) port = PORT;
+
+    struct cli_data data;
+    data.host = host;
+    data.port = port;
+
+    return data;
+}
+
+
+static int create_socket(char *host, char *port) {
     int sockfd;
     struct addrinfo hints, *servinfo, *p;
     int rv;
-    char printable_ip[INET_ADDRSTRLEN]; // IPv4 address as a string
+    char printable_ip[INET_ADDRSTRLEN];
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
 
-    if ((rv = getaddrinfo(host, "8081", &hints, &servinfo)) != 0) {
+    if ((rv = getaddrinfo(host, port, &hints, &servinfo)) != 0) {
         fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
         exit(errno);
     }
 
     for (p = servinfo; p != NULL; p = p->ai_next) {
         if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
-            perror("client: socket");
+            fprintf(stderr, "socket: %s\n", strerror(errno));
             continue;
         }
 
+        // I wonder if this is needed
         // This works: inet_ntop(p->ai_family, &(((struct sockaddr_in*)p->ai_addr)->sin_addr), printable_ip, sizeof(printable_ip));
         inet_ntop(p->ai_family, &(cast_structs(p->ai_addr)->sin_addr), printable_ip, sizeof(printable_ip));
-        printf("attempting connection to %s on port %d\n", printable_ip, ntohs(cast_structs(p->ai_addr)->sin_port));
+        printf("attempting connection to %s(%s) on port %hd\n", host, printable_ip, ntohs(cast_structs(p->ai_addr)->sin_port));
 
         if (connect(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
-            perror("client: connect");
+            fprintf(stderr, "connect: %s\n", strerror(errno));
             close(sockfd);
             continue;
         }
@@ -76,41 +160,17 @@ Options:\n\
     }
 
     if (p == NULL) {
-        fprintf(stderr, "client: failed to connect\n");
+        fprintf(stderr, "failed to connect\n");
         exit(errno);
     }
 
     // This works: inet_ntop(p->ai_family, &(((struct sockaddr_in*)p->ai_addr)->sin_addr), printable_ip, sizeof(printable_ip));
     inet_ntop(p->ai_family, &(cast_structs(p->ai_addr)->sin_addr), printable_ip, sizeof(printable_ip));
-    printf("client: connected to %s on port %d\n", printable_ip, ntohs(cast_structs(p->ai_addr)->sin_port));
+    printf("attempting connection to %s(%s) on port %hd\n", host, printable_ip, ntohs(cast_structs(p->ai_addr)->sin_port));
 
     freeaddrinfo(servinfo);
 
-    printf("Not sending anything to server to see how it behaves\n");
-
-    int sleep_time = 10;
-    printf("Sleeping for %ds\n", sleep_time);
-    sleep(sleep_time);
-
-    //char *msg_to_server = "Hey, Server!\r\n";
-    //if (send(sockfd, msg_to_server, strlen(msg_to_server), 0) == -1) {
-    //    perror("client: send");
-    //    exit(errno);
-    //}
-
-    //char rcv_msg[1024];
-    //int bytes_received;
-    //if ((bytes_received = recv(sockfd, rcv_msg, 1024, 0)) == -1) {
-    //    perror("cliend: recv");
-    //    exit(errno);
-   // }
-
-    //rcv_msg[bytes_received] = '\0';
-    //printf("Received msg from server:\n%s\n", rcv_msg);
-
-    close(sockfd);
-
-    exit(0);
+    return sockfd;
 }
 
 static struct sockaddr_in * cast_structs(struct sockaddr *p_ai_addr) {
