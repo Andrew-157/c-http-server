@@ -59,6 +59,12 @@ Options:\n\
 ";
     char *host = NULL;
     char *port = NULL;
+
+    char *option;
+    for (int i = 1; i < argc; ++i) {
+        option = argv[i];
+    }
+
     // TODO: This is hell, you can do something better
     if (argc > 1) {
         char *option = argv[1];
