@@ -59,69 +59,51 @@ Options:\n\
 ";
     char *host = NULL;
     char *port = NULL;
-
     char *option;
-    for (int i = 1; i < argc; ++i) {
-        option = argv[i];
-    }
 
-    // TODO: This is hell, you can do something better
-    if (argc > 1) {
-        char *option = argv[1];
+    for (int i = 1; i < argc; i++) {
+        option = argv[i];
         if (strcmp(option, "-h") == 0 || strcmp(option, "--help") == 0) {
             printf(help_text, HOST, PORT);
             exit(0);
         } else if (strcmp(option, "-n") == 0 || strcmp(option, "--host") == 0) {
-            if (argc < 3) {
+            // TODO: add validation whether host is a valid FQDN/IP?
+            if (host != NULL) {
+                printf("-n/--host option was provided twice.\n");
+                exit(1);
+            }
+            if ((i+1) == argc) {
                 printf("-n/--host option used without a value.\n");
                 exit(1);
             }
-            host = argv[2];
+            if (strcmp(argv[i+1], "-h") == 0 || strcmp(argv[i+1], "--help") == 0) {
+                // TODO: add a separate help text for --host option
+                printf("Help text for --host\n");
+                exit(0);
+            }
+            host = argv[++i];
         } else if (strcmp(option, "-p") == 0 || strcmp(option, "--port") == 0) {
-            if (argc < 3) {
+            // TODO: add validation whether port is integer?
+            if (port != NULL) {
+                printf("-p/--port option was provided twice.\n");
+                exit(1);
+            }
+            if ((i+1) == argc) {
                 printf("-p/--port option used without a value.\n");
                 exit(1);
             }
-            port = argv[2];
-        } else {
-            printf("Invalid option %s was used, see -h/--help.\n", argv[1]);
-            exit(1);
-        }
-        option = argv[3];
-        if (argc > 3) {
-            if (strcmp(option, "-n") == 0 || strcmp(option, "--host") == 0) {
-                if (host != NULL) {
-                    printf("-n/--host option provided twice.\n");
-                    exit(1);
-                }
-                if (argc < 4) {
-                    printf("-n/--host option used without a value.\n");
-                    exit(1);
-                }
-                host = argv[4];
-            } else if (strcmp(option, "-p") == 0 || strcmp(option, "--port") == 0) {
-                if (port != NULL) {
-                    printf("-p/--port option provided twice.\n");
-                    exit(1);
-                }
-                if (argc < 4) {
-                    printf("-p/--port option used without a value.\n");
-                    exit(1);
-                }
-                port = argv[4];
-            } else {
-                printf("Invalid option %s was used, see -h/--help.\n", argv[3]);
-                exit(1);
+            if (strcmp(argv[i+1], "-h") == 0 || strcmp(argv[i+1], "--help") == 0) {
+                // TODO: add a separate help text for --port option
+                printf("Help text for --port\n");
+                exit(0);
             }
+            port = argv[++i];
         }
-    } else {
-        host = HOST;
-        port = PORT;
     }
 
     if (host == NULL) host = HOST;
     if (port == NULL) port = PORT;
-
+    printf("Host: %s, Port: %s\n", host, port);
     struct cli_data data;
     data.host = host;
     data.port = port;
