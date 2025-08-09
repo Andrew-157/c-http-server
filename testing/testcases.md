@@ -1,4 +1,4 @@
-# Cases for the server to handle
+# Corner Cases for the server to handle
 
 ## Table of Contents
 - [Testing Framework](#testing-framework)
@@ -42,4 +42,4 @@ Cases:
 
 ## Format Cases
 
-By "format" I mean compliance of the HTTP request message with
+By "format" I mean compliance of the HTTP request message with the RFC.
