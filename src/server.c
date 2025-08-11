@@ -15,14 +15,7 @@
 
 int create_server_socket(char *);
 char *read_template(char *);
-
-struct response {
-    int status_code;
-    char *status_message;
-    int send_buffer;
-};
-
-struct response accept_rqst(int, int, unsigned long, unsigned long long);
+char *accept_rqst(int, int, unsigned long, unsigned long long);
 
 int main() {
     int server_sockfd;
@@ -173,8 +166,7 @@ char *read_template(char *template_path) {
 }
 
 
-struct response accept_rqst(int client_sockfd, int recv_msg_buffer, unsigned long max_rqst_line_headers_size, unsigned long long max_body_size) {
-    // What should this function return? Some kind of response struct that would contain status code and pointer to response body?
+char * accept_rqst(int client_sockfd, int recv_msg_buffer, unsigned long max_rqst_line_headers_size, unsigned long long max_body_size) {
 
 }
 
