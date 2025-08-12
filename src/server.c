@@ -11,7 +11,7 @@
 
 #define PORT            "8080" // port on which to listen for incoming connections
 #define BACKLOG         10     // maximum number of pending connections
-#define RECV_MSG_BUFFER 1024   // recv buffer
+#define RECV_MSG_BUFFER_SIZE 1024   // recv buffer
 
 int create_server_socket(char *);
 char *read_template(char *);
@@ -59,26 +59,27 @@ int main() {
     inet_ntop(client_address.sin_family, &client_address.sin_addr, printable_ip, sizeof(printable_ip));
     printf("accepted client connection from IP(%s):PORT(%d)\n", printable_ip, ntohs(client_address.sin_port));
 
-    printf("Reading from client socket\n");
 
-    char recv_msg[RECV_MSG_BUFFER];
-    int bytes_received;
-    bytes_received = recv(client_sockfd, recv_msg, RECV_MSG_BUFFER, 0);
-    // bytes_received == 0  - client closed connection ... I guess
-    // bytes_received == -1 - error occurred
-    if (bytes_received == 0) {
-        printf("client closed connection, ending communication\n");
-        close(client_sockfd);
-        close(server_sockfd);
-        exit(0);
-    } else if (bytes_received == -1) {
-        fprintf(stderr, "recv: %s\n", strerror(errno));
-        close(client_sockfd);
-        close(server_sockfd);
-        exit(errno);
-    }
-    recv_msg[bytes_received] = '\0';
-    printf("Message from client:\n%s\n", recv_msg);
+    accept_rqst(client_sockfd, RECV_MSG_BUFFER_SIZE, 1, 1);
+    //printf("Reading from client socket\n");
+    //char recv_msg[RECV_MSG_BUFFER_SIZE];
+    // int bytes_received;
+    // bytes_received = recv(client_sockfd, recv_msg, RECV_MSG_BUFFER_SIZE, 0);
+    // // bytes_received == 0  - client closed connection ... I guess
+    // // bytes_received == -1 - error occurred
+    // if (bytes_received == 0) {
+    //     printf("client closed connection, ending communication\n");
+    //     close(client_sockfd);
+    //     close(server_sockfd);
+    //     exit(0);
+    // } else if (bytes_received == -1) {
+    //     fprintf(stderr, "recv: %s\n", strerror(errno));
+    //     close(client_sockfd);
+    //     close(server_sockfd);
+    //     exit(errno);
+    // }
+    // recv_msg[bytes_received] = '\0';
+    // printf("Message from client:\n%s\n", recv_msg);
 
     printf("Sending an HTTP response to client with HTML body\n");
 
@@ -166,74 +167,58 @@ char *read_template(char *template_path) {
 }
 
 
-char * accept_rqst(int client_sockfd, int recv_msg_buffer, unsigned long max_rqst_line_headers_size, unsigned long long max_body_size) {
+char * accept_rqst(int client_sockfd, int recv_msg_buffer_size, unsigned long max_rqst_line_headers_size, unsigned long long max_body_size) {
+    printf("Reading message from client\n");
+    char recv_msg[recv_msg_buffer_size];
+    int bytes_received;
 
+    bytes_received = recv(client_sockfd, recv_msg, recv_msg_buffer_size, 0);
+    if (bytes_received == 0) {
+        printf("client closed connection, ending communication\n");
+        return NULL; // is this reasonable?
+    } else if (bytes_received == -1) {
+        // TODO: response to client based on errno:
+        // if, for example, recv times out, respond with 5**
+        return NULL; // this is like this only for now
+    }
+
+    recv_msg[bytes_received] = '\0';
+
+    printf("Received message from client:\n%s\n", recv_msg);
+
+    // parsing request line
+
+    char *method;
+    char *valid_methods[9] = {
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "HEAD",
+        "OPTIONS",
+        "TRACE",
+        "CONNECT"
+    };
+
+    char *url;
+    char *protocol_version;
+    for (int i = 0; i < bytes_received; i++) {
+        if (method == NULL) {
+            while (!(recv_msg[i] == ' ')){
+                &method = recv_msg[i];
+                method++;
+            }
+            &method = '\0';
+        }
+        int is_method_valid = 0;
+        for (int j = 0; j < 9; ++j) {
+            if (strcmp(method, valid_methods[j]) == 0)
+                is_method_valid = 1;
+        }
+        if (!is_method_valid)
+            printf("method: %s is invalid\n", method);
+    }
+    return NULL;
 }
 
-// Commenting it out for now to start writing from zero
-/*
- * Read from client socket and ... I don't know yet
- * - client sockfd (int) - client socket to read from,
- * - recv_msg_buffer (int) - buffer size in bytes for reading client socket using `recv`,
- * - max_rqst_line_headers_size (unsigned long) - maximum size in bytes of request line + header lines,
- * - max_body_size (unsigned long long) - maximum size of request body in bytes
- */
-//void accept_rqst(int client_sockfd, int recv_msg_buffer, unsigned long max_rqst_line_headers_size, unsigned long long max_body_size) {
-//    //int recv_retries; // maximum amount of times `recv` function will be called in attempt to receive full HTTP message
-//    // Rethink that: recv_retries = (int)((rqst_line_headers_size + body_size) / recv_msg_buffer) + 1;
-//    char recv_msg[recv_msg_buffer];
-//    int bytes_received;
-//
-//    // Check how many bytes of everything we received
-//    int rqst_line_bytes_received, headers_bytes_received, body_bytes_received;
-//    rqst_line_bytes_received = 0;
-//    headers_bytes_received = 0;
-//    body_bytes_received = 0;
-//
-//    // bool values to know whether an entity was read
-//    int rqst_line_received, headers_received, body_received;
-//    rqst_line_received = 0;
-//    headers_received = 0;
-//    body_received = 0;
-//
-//    // Value from Content-Length header
-//    int content_length = 0;
-//
-//    int msg_complete = 0;
-//    while (!msg_complete) {
-//        bytes_received = recv(client_sockfd, recv_msg, recv_msg_buffer, 0);
-//        if (!rqst_line_received) {
-//            rqst_line_bytes_received += bytes_received;
-//            if (rqst_line_bytes_received > max_rqst_line_headers_size) {
-//                 // Return Error to client "413 Entity Too Large"
-//                 break;
-//            }
-//        } else if (!headers_received) {
-//            headers_bytes_received += bytes_received;
-//            if ((rqst_line_bytes_received + headers_bytes_received) > max_rqst_line_headers_size) {
-//                // Return error to client "413 Entity Too Large"
-//                break;
-//            }
-//        } else if (!body_received) {
-//            // we can catch that early when reading Content-Length header, but
-//            // - what if this header is absent - if this is the method that needs body, then we need to return error
-//            // - what if actual body size is not equal to what is set in header, we could simply stop reading after Content-Length value
-//            // was received, but it is not very good to operate on not complete data, and may leave, for example,
-//            // some broken database record
-//            if (!content_length) {
-//                // Return error to client "400 Bad Request"
-//                break;
-//            } else if (content_length > max_body_size) {
-//               // Return error to client "413 Entity Too Large" - or should it be better done at the point of parsing headers
-//               break;
-//            }
-//            // What to do when receive body is less than Content-Length?
-//            body_bytes_received += bytes_received;
-//            if (body_bytes_received > max_body_size) {
-//                // in case Content-Length header doesn't equal what is truly sent
-//                // Return error to client "413 Entity Too Large"
-//                break;
-//            }
-//        }
-//    }
-//}
