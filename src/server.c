@@ -188,7 +188,7 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size, unsigned long ma
 
     // parsing request line
 
-    char *method;
+    char *method; // NOTE: this is completely wrong, you cannot modify string created this way
     char *valid_methods[9] = {
         "GET",
         "POST",
