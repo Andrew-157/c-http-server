@@ -203,22 +203,6 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size, unsigned long ma
 
     char *url;
     char *protocol_version;
-    for (int i = 0; i < bytes_received; i++) {
-        if (method == NULL) {
-            while (!(recv_msg[i] == ' ')){
-                &method = recv_msg[i];
-                method++;
-            }
-            &method = '\0';
-        }
-        int is_method_valid = 0;
-        for (int j = 0; j < 9; ++j) {
-            if (strcmp(method, valid_methods[j]) == 0)
-                is_method_valid = 1;
-        }
-        if (!is_method_valid)
-            printf("method: %s is invalid\n", method);
-    }
     return NULL;
 }
 
