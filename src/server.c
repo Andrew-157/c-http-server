@@ -172,7 +172,6 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size, unsigned long ma
     char recv_msg[recv_msg_buffer_size];
     int bytes_received;
 
-    // shouldn't this be in a while loop?
     bytes_received = recv(client_sockfd, recv_msg, recv_msg_buffer_size, 0);
     if (bytes_received == 0) {
         printf("client closed connection, ending communication\n");
@@ -186,8 +185,6 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size, unsigned long ma
     recv_msg[bytes_received] = '\0';
 
     printf("Received message from client:\n%s\n", recv_msg);
-
-    // parsing request line
 
     return NULL;
 }
