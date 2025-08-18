@@ -61,25 +61,6 @@ int main() {
 
 
     accept_rqst(client_sockfd, RECV_MSG_BUFFER_SIZE, 1, 1);
-    //printf("Reading from client socket\n");
-    //char recv_msg[RECV_MSG_BUFFER_SIZE];
-    // int bytes_received;
-    // bytes_received = recv(client_sockfd, recv_msg, RECV_MSG_BUFFER_SIZE, 0);
-    // // bytes_received == 0  - client closed connection ... I guess
-    // // bytes_received == -1 - error occurred
-    // if (bytes_received == 0) {
-    //     printf("client closed connection, ending communication\n");
-    //     close(client_sockfd);
-    //     close(server_sockfd);
-    //     exit(0);
-    // } else if (bytes_received == -1) {
-    //     fprintf(stderr, "recv: %s\n", strerror(errno));
-    //     close(client_sockfd);
-    //     close(server_sockfd);
-    //     exit(errno);
-    // }
-    // recv_msg[bytes_received] = '\0';
-    // printf("Message from client:\n%s\n", recv_msg);
 
     printf("Sending an HTTP response to client with HTML body\n");
 
