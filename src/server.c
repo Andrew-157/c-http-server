@@ -153,6 +153,7 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size, unsigned long ma
     char recv_msg[recv_msg_buffer_size];
     int bytes_received;
 
+    // recv should be called in a while until full valid http message is received
     bytes_received = recv(client_sockfd, recv_msg, recv_msg_buffer_size, 0);
     if (bytes_received == 0) {
         printf("client closed connection, ending communication\n");
@@ -160,7 +161,7 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size, unsigned long ma
     } else if (bytes_received == -1) {
         // TODO: response to client based on errno:
         // if, for example, recv times out, respond with 5**
-        return NULL; // this is like this only for now
+        return NULL;
     }
 
     recv_msg[bytes_received] = '\0';
