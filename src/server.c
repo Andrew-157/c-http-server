@@ -59,7 +59,6 @@ int main() {
     inet_ntop(client_address.sin_family, &client_address.sin_addr, printable_ip, sizeof(printable_ip));
     printf("accepted client connection from IP(%s):PORT(%d)\n", printable_ip, ntohs(client_address.sin_port));
 
-
     accept_rqst(client_sockfd, RECV_MSG_BUFFER_SIZE, 1, 1);
 
     printf("Sending an HTTP response to client with HTML body\n");
@@ -150,24 +149,38 @@ char *read_template(char *template_path) {
 
 char * accept_rqst(int client_sockfd, int recv_msg_buffer_size, unsigned long max_rqst_line_headers_size, unsigned long long max_body_size) {
     printf("Reading message from client\n");
+
+    // booleans
+    int rqst_line_received, headers_received, body_received, message_complete;
+    rqst_line_received = 0;    // was request line received
+    headers_received = 0;      // were headers received
+    body_received = 0;         // was body received
+    message_complete = 0;      // is message complete
+
+    // received bytes size handling
+    int received_rqst_line_headers_bytes, received_body_bytes;
+    received_rqst_line_headers_bytes = 0;
+    received_body_bytes = 0;
+
     char recv_msg[recv_msg_buffer_size];
-    int bytes_received;
+    int chunk_bytes_received; // variable to store what recv returned on each call
+    while (!message_complete) {
+        chunk_bytes_received = recv(client_sockfd, recv_msg, recv_msg_buffer_size, 0);
+        if (chunk_bytes_received == 0) {
+            printf("client closed connection, ending communication\n");
+            return NULL;
+        } else if (bytes_received == -1) {
+            fprintf(stderr, "error occurred while trying to read from client socket: %s, ending communication\n", strerror(errno));
+            return NULL;
+        }
 
-    // recv should be called in a while until full valid http message is received
-    bytes_received = recv(client_sockfd, recv_msg, recv_msg_buffer_size, 0);
-    if (bytes_received == 0) {
-        printf("client closed connection, ending communication\n");
-        return NULL; // is this reasonable?
-    } else if (bytes_received == -1) {
-        // TODO: response to client based on errno:
-        // if, for example, recv times out, respond with 5**
-        return NULL;
+        if (!rqst_line_received) {
+            // parse request line
+        } else if (!headers_received) {
+            // parse headers
+        } else if (!body_received) {
+            // parse body
+        }
     }
-
-    recv_msg[bytes_received] = '\0';
-
-    printf("Received message from client:\n%s\n", recv_msg);
-
-    return NULL;
 }
 
