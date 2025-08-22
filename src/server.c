@@ -9,8 +9,8 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
-#define PORT            "8080" // port on which to listen for incoming connections
-#define BACKLOG         10     // maximum number of pending connections
+#define PORT            "8080"      // port on which to listen for incoming connections
+#define BACKLOG         10          // maximum number of pending connections
 #define RECV_MSG_BUFFER_SIZE 1024   // recv buffer
 
 int create_server_socket(char *);
@@ -145,7 +145,6 @@ char *read_template(char *template_path) {
     fclose(file);
     return html;
 }
-
 
 char * accept_rqst(int client_sockfd, int recv_msg_buffer_size, unsigned long max_rqst_line_headers_size, unsigned long long max_body_size) {
     printf("Reading message from client\n");
