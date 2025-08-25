@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sys/types.h>
@@ -13,11 +14,14 @@
 #define BACKLOG         10          // maximum number of pending connections
 #define RECV_MSG_BUFFER_SIZE 1024   // recv buffer
 
+void signal_handler(int);
 int create_server_socket(char *);
 char *read_template(char *);
 char *accept_rqst(int, int);
 
 int main() {
+    signal(SIGINT, signal_handler);
+
     int server_sockfd;
     server_sockfd = create_server_socket(PORT);
 
@@ -82,6 +86,11 @@ int main() {
         close(client_sockfd);
     }
     close(server_sockfd);
+    exit(0);
+}
+
+void signal_handler(int sig) {
+    printf("Caught signal: %d\n", sig);
     exit(0);
 }
 
