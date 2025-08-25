@@ -15,7 +15,7 @@
 
 int create_server_socket(char *);
 char *read_template(char *);
-char *accept_rqst(int, int, unsigned long, unsigned long long);
+char *accept_rqst(int, int);
 
 int main() {
     int server_sockfd;
@@ -59,7 +59,7 @@ int main() {
     inet_ntop(client_address.sin_family, &client_address.sin_addr, printable_ip, sizeof(printable_ip));
     printf("accepted client connection from IP(%s):PORT(%d)\n", printable_ip, ntohs(client_address.sin_port));
 
-    accept_rqst(client_sockfd, RECV_MSG_BUFFER_SIZE, 1, 1);
+    accept_rqst(client_sockfd, RECV_MSG_BUFFER_SIZE);
 
     printf("Sending an HTTP response to client with HTML body\n");
 
@@ -146,40 +146,18 @@ char *read_template(char *template_path) {
     return html;
 }
 
-char * accept_rqst(int client_sockfd, int recv_msg_buffer_size, unsigned long max_rqst_line_headers_size, unsigned long long max_body_size) {
+char * accept_rqst(int client_sockfd, int recv_msg_buffer_size) {
     printf("Reading message from client\n");
 
-    // booleans
-    int rqst_line_received, headers_received, body_received, message_complete;
-    rqst_line_received = 0;    // was request line received
-    headers_received = 0;      // were headers received
-    body_received = 0;         // was body received
-    message_complete = 0;      // is message complete
-
-    // received bytes size handling
-    int received_rqst_line_headers_bytes, received_body_bytes;
-    received_rqst_line_headers_bytes = 0;
-    received_body_bytes = 0;
-
     char recv_msg[recv_msg_buffer_size];
-    int chunk_bytes_received; // variable to store what recv returned on each call
-    while (!message_complete) {
-        chunk_bytes_received = recv(client_sockfd, recv_msg, recv_msg_buffer_size, 0);
-        if (chunk_bytes_received == 0) {
-            printf("client closed connection, ending communication\n");
-            return NULL;
-        } else if (bytes_received == -1) {
-            fprintf(stderr, "error occurred while trying to read from client socket: %s, ending communication\n", strerror(errno));
-            return NULL;
-        }
-
-        if (!rqst_line_received) {
-            // parse request line
-        } else if (!headers_received) {
-            // parse headers
-        } else if (!body_received) {
-            // parse body
-        }
-    }
+    int chunk_bytes_received;
+    chunk_bytes_received = recv(client_sockfd, recv_msg, recv_msg_buffer_size, 0);
+    if (chunk_bytes_received == 0) {
+        printf("client closed connection, ending communication\n");
+        return NULL;
+     } else if (bytes_received == -1) {
+        fprintf(stderr, "error occurred while trying to read from client socket: %s, ending communication\n", strerror(errno));
+        return NULL;
+     }
 }
 
