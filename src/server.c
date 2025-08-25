@@ -39,47 +39,49 @@ int main() {
     char printable_ip[INET_ADDRSTRLEN];
 
     sin_size = sizeof client_address;
-    if ((client_sockfd = accept(server_sockfd, (struct sockaddr *)&client_address, &sin_size)) == -1) {
-        close(server_sockfd);
-        fprintf(stderr, "accept: %s\n", strerror(errno));
-        exit(errno);
-    }
 
-    // timeout on `recv`
-    struct timeval timeout;
-    timeout.tv_sec = 1; // even 1 second is a lot probably
-    timeout.tv_usec = 0;
-    if (setsockopt(client_sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == -1) {
+    while (1) {
+        if ((client_sockfd = accept(server_sockfd, (struct sockaddr *)&client_address, &sin_size)) == -1) {
+            close(server_sockfd);
+            fprintf(stderr, "accept: %s\n", strerror(errno));
+            exit(errno);
+        }
+
+        // timeout on `recv`
+        struct timeval timeout;
+        timeout.tv_sec = 1; // even 1 second is a lot probably
+        timeout.tv_usec = 0;
+        if (setsockopt(client_sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == -1) {
+            close(client_sockfd);
+            close(server_sockfd);
+            fprintf(stderr, "setsockopt: %s\n", strerror(errno));
+            exit(errno);
+        }
+
+        inet_ntop(client_address.sin_family, &client_address.sin_addr, printable_ip, sizeof(printable_ip));
+        printf("accepted client connection from IP(%s):PORT(%d)\n", printable_ip, ntohs(client_address.sin_port));
+
+        accept_rqst(client_sockfd, RECV_MSG_BUFFER_SIZE);
+
+        printf("Sending an HTTP response to client with HTML body\n");
+
+        char *html = read_template("./templates/index.html");
+        if (html == NULL) {
+            fprintf(stderr, "failed to open html template: %s\n", strerror(errno));
+            close(client_sockfd);
+            close(server_sockfd);
+            exit(errno);
+        }
+
+        char *http_response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 232\r\n\r\n";
+        send(client_sockfd, http_response, strlen(http_response), 0);
+        send(client_sockfd, html, strlen(html), 0);
+        free(html);
+
+        printf("Ending communication\n\n");
         close(client_sockfd);
-        close(server_sockfd);
-        fprintf(stderr, "setsockopt: %s\n", strerror(errno));
-        exit(errno);
     }
-
-    inet_ntop(client_address.sin_family, &client_address.sin_addr, printable_ip, sizeof(printable_ip));
-    printf("accepted client connection from IP(%s):PORT(%d)\n", printable_ip, ntohs(client_address.sin_port));
-
-    accept_rqst(client_sockfd, RECV_MSG_BUFFER_SIZE);
-
-    printf("Sending an HTTP response to client with HTML body\n");
-
-    char *html = read_template("./templates/index.html");
-    if (html == NULL) {
-        fprintf(stderr, "failed to open html template: %s\n", strerror(errno));
-        close(client_sockfd);
-        close(server_sockfd);
-        exit(errno);
-    }
-
-    char *http_response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 232\r\n\r\n";
-    send(client_sockfd, http_response, strlen(http_response), 0);
-    send(client_sockfd, html, strlen(html), 0);
-    free(html);
-
-    printf("Ending communication\n");
-    close(client_sockfd);
     close(server_sockfd);
-
     exit(0);
 }
 
@@ -169,12 +171,12 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size) {
             printf("Encountered CRLF, stopping reading request line\n");
             rqst_line[i] = '\0';
             break;
-        } else if (recv_msg[i] == ' ') {
-            method[i] = '\0';
-            method_read = 1;
         } else {
             rqst_line[i] = recv_msg[i];
-            if (!method_read)
+            if (recv_msg[i] == ' ' && !method_read) {
+                method[i] = '\0';
+                method_read = 1;
+            } else if (!method_read)
                 method[i] = recv_msg[i];
         }
     }
