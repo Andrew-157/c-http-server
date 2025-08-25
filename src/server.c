@@ -155,9 +155,24 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size) {
     if (chunk_bytes_received == 0) {
         printf("client closed connection, ending communication\n");
         return NULL;
-     } else if (bytes_received == -1) {
+    } else if (chunk_bytes_received == -1) {
         fprintf(stderr, "error occurred while trying to read from client socket: %s, ending communication\n", strerror(errno));
         return NULL;
-     }
+    }
+
+    char rqst_line[100]; // i don't have a slightest idea what would be the correct size
+
+    for (int i = 0; i < chunk_bytes_received; i++) {
+        if ((recv_msg[i] == '\r') && ((i+1) < chunk_bytes_received) && (recv_msg[i+1] == '\n')) {
+            printf("Encountered CRLF, stopping reading request line\n");
+            rqst_line[i] = '\0';
+            break;
+        } else {
+            rqst_line[i] = recv_msg[i];
+        }
+    }
+
+    printf("Received request line from client:\n%s\n", rqst_line);
+    return NULL;
 }
 
