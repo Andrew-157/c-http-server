@@ -172,9 +172,14 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size) {
     }
 
     char rqst_line[100]; // i don't have a slightest idea what would be the correct size
+
     char method[8]; // is OPTIONS the longest method?
     int method_read = 0;
 
+    char url[100]; // also no idea how long the url should be
+    int url_read = 0;
+
+    int j = 0; // index for keeping track of element in method, url, protocol
     for (int i = 0; i < chunk_bytes_received; i++) {
         if ((recv_msg[i] == '\r') && ((i+1) < chunk_bytes_received) && (recv_msg[i+1] == '\n')) {
             printf("Encountered CRLF, stopping reading request line\n");
@@ -182,16 +187,29 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size) {
             break;
         } else {
             rqst_line[i] = recv_msg[i];
-            if (recv_msg[i] == ' ' && !method_read) {
-                method[i] = '\0';
-                method_read = 1;
-            } else if (!method_read)
-                method[i] = recv_msg[i];
+            if (recv_msg[i] == ' ') {
+                if (!method_read) {
+                    method[j] = '\0';
+                    method_read = 1;
+                    j = 0;
+                } else if (!url_read) {
+                    url[j] = '\0';
+                    url_read = 1;
+                    j = 0;
+                }
+            } else {
+                if (!method_read) {
+                    method[j++] = recv_msg[i];
+                } else if (!url_read) {
+                    url[j++] = recv_msg[i];
+                }
+            }
         }
     }
 
     printf("Received request line from client:\n%s\n", rqst_line);
     printf("Request message method is: %s\n", method);
+    printf("Request message url is: %s\n", url);
     return NULL;
 }
 
