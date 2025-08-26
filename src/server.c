@@ -213,6 +213,29 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size) {
         }
     }
 
+    char *allowed_methods [9] = {
+        "GET",
+        "HEAD",
+        "POST",
+        "PUT",
+        "DELETE",
+        "CONNECT",
+        "OPTIONS",
+        "TRACE",
+        "PATCH"
+    };
+
+    int method_valid = 0;
+    for (int mi = 0; mi < 9; mi++) {
+        if (strcmp(allowed_methods[mi], method) == 0) {
+            method_valid = 1;
+            break;
+        }
+    }
+
+    // TODO: send response to client
+    printf("Method %s is valid: %d\n", method, method_valid);
+
     printf("Received request line from client:\n%s\n", rqst_line);
     printf("Request message method is: %s\n", method);
     printf("Request message url is: %s\n", url);

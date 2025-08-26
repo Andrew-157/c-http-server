@@ -14,6 +14,8 @@ Using the testing client program, different formats of messages can be sent, tim
 
 > `TODO`: Introduce some config file, where each testcase could be described using some common format, and this file could then be passed to the client program, which would run those testcases.
 
+> `TODO`: Allow running testcases using some python script, for example, or even better - robot framework.
+
 ---
 
 ## Conventions

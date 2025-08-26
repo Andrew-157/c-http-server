@@ -27,6 +27,7 @@ int main(int argc, char **argv) {
     int sockfd;
     sockfd = create_socket(data.host, data.port);
 
+    // TODO: allow configuring what method to send
     char *send_msg = "GET / HTTP/1.1\r\n\r\n";
     if (send(sockfd, send_msg, strlen(send_msg), 0) == -1) {
         close(sockfd);
