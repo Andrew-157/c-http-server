@@ -179,30 +179,36 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size) {
     char url[100]; // also no idea how long the url should be
     int url_read = 0;
 
+    char protocol[9]; // yeah, im sure this time
+    int protocol_read = 0;
+
     int j = 0; // index for keeping track of element in method, url, protocol
     for (int i = 0; i < chunk_bytes_received; i++) {
         if ((recv_msg[i] == '\r') && ((i+1) < chunk_bytes_received) && (recv_msg[i+1] == '\n')) {
+            protocol[j] = '\0';
+            protocol_read = 1;
             printf("Encountered CRLF, stopping reading request line\n");
             rqst_line[i] = '\0';
             break;
+        }
+        rqst_line[i] = recv_msg[i];
+        if (recv_msg[i] == ' ') {
+            if (!method_read) {
+                method[j] = '\0';
+                method_read = 1;
+                j = 0;
+            } else if (!url_read) {
+                url[j] = '\0';
+                url_read = 1;
+                j = 0;
+            }
         } else {
-            rqst_line[i] = recv_msg[i];
-            if (recv_msg[i] == ' ') {
-                if (!method_read) {
-                    method[j] = '\0';
-                    method_read = 1;
-                    j = 0;
-                } else if (!url_read) {
-                    url[j] = '\0';
-                    url_read = 1;
-                    j = 0;
-                }
-            } else {
-                if (!method_read) {
-                    method[j++] = recv_msg[i];
-                } else if (!url_read) {
-                    url[j++] = recv_msg[i];
-                }
+            if (!method_read) {
+                method[j++] = recv_msg[i];
+            } else if (!url_read) {
+                url[j++] = recv_msg[i];
+            } else if (!protocol_read) {
+                protocol[j++] = recv_msg[i];
             }
         }
     }
@@ -210,6 +216,7 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size) {
     printf("Received request line from client:\n%s\n", rqst_line);
     printf("Request message method is: %s\n", method);
     printf("Request message url is: %s\n", url);
+    printf("Request message protocol is: %s\n", protocol);
     return NULL;
 }
 
