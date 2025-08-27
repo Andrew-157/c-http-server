@@ -1,2 +1,8 @@
+logger.o:
+	gcc -Wall -c logger.c
+
+test.o:
+	gcc -Wall -c test.c
+
 c-http-server:
-	$(CC) server.c -Wall -pedantic
+	$(CC) test.o logger.o
