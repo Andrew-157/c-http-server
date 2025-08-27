@@ -172,13 +172,10 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size) {
     }
 
     char rqst_line[100]; // i don't have a slightest idea what would be the correct size
-
     char method[8]; // is OPTIONS the longest method?
     int method_read = 0;
-
     char url[100]; // also no idea how long the url should be
     int url_read = 0;
-
     char protocol[9]; // yeah, im sure this time
     int protocol_read = 0;
 
@@ -212,29 +209,6 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size) {
             }
         }
     }
-
-    char *allowed_methods [9] = {
-        "GET",
-        "HEAD",
-        "POST",
-        "PUT",
-        "DELETE",
-        "CONNECT",
-        "OPTIONS",
-        "TRACE",
-        "PATCH"
-    };
-
-    int method_valid = 0;
-    for (int mi = 0; mi < 9; mi++) {
-        if (strcmp(allowed_methods[mi], method) == 0) {
-            method_valid = 1;
-            break;
-        }
-    }
-
-    // TODO: send response to client
-    printf("Method %s is valid: %d\n", method, method_valid);
 
     printf("Received request line from client:\n%s\n", rqst_line);
     printf("Request message method is: %s\n", method);
