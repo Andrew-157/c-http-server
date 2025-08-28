@@ -4,12 +4,7 @@
 #define LOGGER_SETUP_ENV "LoggerWasSet"
 #define LOGGER_DEBUG_ENABLED "LoggerDebugEnabled"
 
-static char *LEVELS[4] = {
-    "INFO",
-    "DEBUG",
-    "WARNING",
-    "ERROR"
-};
+extern char *LEVELS[4];
 
 void setupLogger(int);
 void log_message(char *, char *);

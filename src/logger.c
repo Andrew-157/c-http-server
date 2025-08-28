@@ -4,18 +4,22 @@
 
 #include "logger.h"
 
+// TODO: each level should also be in a variable
+char *LEVELS[4] = {
+    "INFO",
+    "DEBUG",
+    "WARNING",
+    "ERROR"
+};
+
 /*
  * Set up logger - idk, i need to learn how to write docstrings
  * */
 void setupLogger(int enable_debug) {
-    printf("Enabled debug: %d\n", enable_debug);
-    if (enable_debug) {
-        printf("Enabling debug\n");
+    if (enable_debug)
         setenv(LOGGER_DEBUG_ENABLED, "1", 1);
-    } else {
-        printf("Disabling debug\n");
+    else
         setenv(LOGGER_DEBUG_ENABLED, "0", 1);
-    }
     setenv(LOGGER_SETUP_ENV, "1", 1); // value doesn't really matter here
 }
 
@@ -23,8 +27,7 @@ void setupLogger(int enable_debug) {
  * log a message
  * */
 void log_message(char *level, char *msg) {
-    char *env = getenv(LOGGER_SETUP_ENV);
-    if (env == NULL) {
+    if (getenv(LOGGER_SETUP_ENV) == NULL) {
         fprintf(stderr, "setupLogger function wasn't called beforehand\n");
         exit(1);
     }
@@ -36,17 +39,16 @@ void log_message(char *level, char *msg) {
         }
     }
     if (!level_valid) {
+        // TODO: print valid levels
         fprintf(stderr, "Invalid severity level \"%s\" for logger\n", level);
         exit(1);
     }
-    if (strcmp(level, "ERROR") == 0 || strcmp(level, "WARNING") == 0){
+    if (strcmp(level, "ERROR") == 0 || strcmp(level, "WARNING") == 0)
         fprintf(stderr, "%s: %s", level, msg);
-    } else if (strcmp(level, "DEBUG") == 0) {
-        printf("Debug is enabled: %d\n", atoi(getenv(LOGGER_DEBUG_ENABLED)));
+    else if (strcmp(level, "DEBUG") == 0) {
         if (atoi(getenv(LOGGER_DEBUG_ENABLED)))
             printf("%s: %s", level, msg);
-    } else {
+    } else
         printf("%s: %s", level, msg);
-    }
 }
 
