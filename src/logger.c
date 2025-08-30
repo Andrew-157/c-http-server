@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,8 +27,8 @@ void setupLogger(int enable_debug) {
 /*
  * log a message
  * */
-// TODO: instead of accepting just `char *msg`, accept a variable length argument list like printf
-void log_message(char *level, char *msg) {
+// TODO: extend accepted formatting options
+void log_message(char *level, char *msg, ...) {
     if (getenv(LOGGER_SETUP_ENV) == NULL) {
         fprintf(stderr, "setupLogger function wasn't called beforehand\n");
         exit(1);
@@ -44,12 +45,51 @@ void log_message(char *level, char *msg) {
         fprintf(stderr, "Invalid severity level \"%s\" for logger\n", level);
         exit(1);
     }
+
+    FILE *stream; // choose where to send message based on level - stdout or stderr
     if (strcmp(level, "ERROR") == 0 || strcmp(level, "WARNING") == 0)
-        fprintf(stderr, "%s: %s", level, msg);
+        stream = stderr;
     else if (strcmp(level, "DEBUG") == 0) {
         if (atoi(getenv(LOGGER_DEBUG_ENABLED)))
-            printf("%s: %s", level, msg);
+            stream = stdout;
+        else
+            return;
     } else
-        printf("%s: %s", level, msg);
+        stream = stdout;
+
+    fprintf(stream, "%s: ", level);
+    // NOTE: took it from "The C Programming Language - 2nd Edition"(`minprintf` implementation),
+    // it is fine for printing to console, but I don't think it will work well for sending to syslog, for example,
+    // as I am printing here one character at a time, so it will have to be reworked, but for now it is okay
+    va_list ap; // points to each unnamed arg in turn
+    char *p, *sval;
+    int ival;
+    double dval;
+
+    va_start(ap, msg); // make ap point to 1st unnamed arg
+    for (p = msg; *p; p++) {
+        if (*p != '%') {
+            fprintf(stream, "%c", *p);
+            continue;
+        }
+        switch (*++p) {
+            case 'd':
+                ival = va_arg(ap, int);
+                fprintf(stream, "%d", ival);
+                break;
+            case 'f':
+                dval = va_arg(ap, double);
+                fprintf(stream, "%f", dval);
+                break;
+            case 's':
+                for (sval = va_arg(ap, char *); *sval; sval++)
+                    fprintf(stream, "%c", *sval);
+                break;
+            default:
+                fprintf(stream, "%c", *p);
+                break;
+        }
+    }
+    va_end(ap); // clean up when done
 }
 

@@ -7,6 +7,6 @@
 extern char *LEVELS[4];
 
 void setupLogger(int);
-void log_message(char *, char *);
+void log_message(char *, char *, ...);
 
 #endif
