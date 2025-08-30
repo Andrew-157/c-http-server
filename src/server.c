@@ -23,6 +23,7 @@ char *accept_rqst(int, int);
 
 int main() {
     signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
 
     // TODO: enable debug based on cli parameter --debugLog or something like that
     setupLogger(0);
