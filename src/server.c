@@ -12,8 +12,8 @@
 
 #include "logger.h"
 
-#define PORT            "8080"      // port on which to listen for incoming connections
-#define BACKLOG         10          // maximum number of pending connections
+#define PORT                 "8080" // port on which to listen for incoming connections
+#define BACKLOG              10     // maximum number of pending connections
 #define RECV_MSG_BUFFER_SIZE 1024   // recv buffer
 
 void signal_handler(int);
@@ -24,20 +24,23 @@ char *accept_rqst(int, int);
 int main() {
     signal(SIGINT, signal_handler);
 
+    // TODO: enable debug based on cli parameter --debugLog or something like that
+    setupLogger(0);
+
     int server_sockfd;
     server_sockfd = create_server_socket(PORT);
 
     if (server_sockfd == -1) {
-        fprintf(stderr, "Failed to create server socket: %s\n", strerror(errno));
+        log_message(ERROR, "Failed to create server socket: %s\n", strerror(errno));
         exit(errno);
     }
 
     if (listen(server_sockfd, BACKLOG) == -1) {
-        fprintf(stderr, "listen: %s\n", strerror(errno));
+        log_message(ERROR, "listen: %s\n", strerror(errno));
         exit(errno);
     }
 
-    printf("accepting client connections...\n");
+    log_message(INFO, "Accepting client connections...\n");
 
     int client_sockfd;
     socklen_t sin_size;
@@ -49,7 +52,7 @@ int main() {
     while (1) {
         if ((client_sockfd = accept(server_sockfd, (struct sockaddr *)&client_address, &sin_size)) == -1) {
             close(server_sockfd);
-            fprintf(stderr, "accept: %s\n", strerror(errno));
+            log_message(ERROR, "accept: %s", strerror(errno));
             exit(errno);
         }
 
@@ -60,20 +63,20 @@ int main() {
         if (setsockopt(client_sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) == -1) {
             close(client_sockfd);
             close(server_sockfd);
-            fprintf(stderr, "setsockopt: %s\n", strerror(errno));
+            log_message(ERROR, "setsockopt: %s\n", strerror(errno));
             exit(errno);
         }
 
         inet_ntop(client_address.sin_family, &client_address.sin_addr, printable_ip, sizeof(printable_ip));
-        printf("accepted client connection from IP(%s):PORT(%d)\n", printable_ip, ntohs(client_address.sin_port));
+        log_message(INFO, "Accepted client connection from IP(%s):PORT(%d)\n", printable_ip, ntohs(client_address.sin_port));
 
         accept_rqst(client_sockfd, RECV_MSG_BUFFER_SIZE);
 
-        printf("Sending an HTTP response to client with HTML body\n");
+        log_message(INFO, "Sending an HTTP response to client with HTML body\n");
 
         char *html = read_template("./templates/index.html");
         if (html == NULL) {
-            fprintf(stderr, "failed to open html template: %s\n", strerror(errno));
+            log_message(ERROR, "Failed to open html template: %s\n", strerror(errno));
             close(client_sockfd);
             close(server_sockfd);
             exit(errno);
@@ -84,7 +87,7 @@ int main() {
         send(client_sockfd, html, strlen(html), 0);
         free(html);
 
-        printf("Ending communication\n\n");
+        log_message(INFO, "Ending communication\n\n");
         close(client_sockfd);
     }
     close(server_sockfd);
@@ -92,7 +95,7 @@ int main() {
 }
 
 void signal_handler(int sig) {
-    printf("Caught signal: %d\n", sig);
+    log_message(WARNING, "Caught signal: %d\n", sig);
     exit(0);
 }
 
@@ -107,13 +110,13 @@ int create_server_socket(char *port) {
 
     int result;
     if ((result = getaddrinfo(NULL, port, &hints, &servinfo)) != 0) {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(result));
+        log_message(ERROR, "getaddrinfo: %s\n", gai_strerror(result));
         exit(errno);
     }
 
     for (p = servinfo; p != NULL; p = p->ai_next) {
         if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
-            fprintf(stderr, "socket: %s\n", strerror(errno));
+            log_message(ERROR, "socket: %s\n", strerror(errno));
             continue;
         }
 
@@ -121,14 +124,14 @@ int create_server_socket(char *port) {
         if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
             sockfd = -1;
             close(sockfd);
-            fprintf(stderr, "setsockopt: %s\n", strerror(errno));
+            log_message(ERROR, "setsockopt: %s\n", strerror(errno));
             continue;
         }
 
         if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
             sockfd = -1;
             close(sockfd);
-            fprintf(stderr, "bind: %s\n", strerror(errno));
+            log_message(ERROR, "bind: %s\n", strerror(errno));
             continue;
         }
 
@@ -136,7 +139,7 @@ int create_server_socket(char *port) {
     }
 
     if (p == NULL)
-        fprintf(stderr, "server: failed to bind\n");
+        log_message(ERROR, "server: failed to bind\n");
 
     freeaddrinfo(servinfo); // all done with this structure
     return sockfd;
@@ -160,20 +163,20 @@ char *read_template(char *template_path) {
 }
 
 char * accept_rqst(int client_sockfd, int recv_msg_buffer_size) {
-    printf("Reading message from client\n");
+    log_message(INFO, "Reading message from client\n");
 
     char recv_msg[recv_msg_buffer_size];
     int chunk_bytes_received;
     chunk_bytes_received = recv(client_sockfd, recv_msg, recv_msg_buffer_size, 0);
     if (chunk_bytes_received == 0) {
-        printf("client closed connection, ending communication\n");
+        log_message(WARNING, "client closed connection, ending communication\n");
         return NULL;
     } else if (chunk_bytes_received == -1) {
-        fprintf(stderr, "error occurred while trying to read from client socket: %s, ending communication\n", strerror(errno));
+        log_message(ERROR, "error occurred while trying to read from client socket: %s, ending communication\n", strerror(errno));
         return NULL;
     }
 
-    printf("Bytes received: %d\n", chunk_bytes_received);
+    log_message(INFO, "Bytes received: %d\n", chunk_bytes_received);
 
     char rqst_line[100]; // i don't have a slightest idea what would be the correct size
     int rqst_line_read = 0;
@@ -187,14 +190,14 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size) {
     int j = 0; // index for keeping track of element in method, url, protocol
     for (int i = 0; i < chunk_bytes_received; i++) {
         if ((recv_msg[i] == '\r') && ((i+1) < chunk_bytes_received) && (recv_msg[i+1] == '\n')) {
-            printf("Encountered CRLF\n");
+            log_message(DEBUG, "Encountered CRLF\n");
             if ((i+3) < chunk_bytes_received && recv_msg[i+2] == '\r' && recv_msg[i+3] == '\n') {
-                printf("Encountered double CRLF\n");
+                log_message(DEBUG, "Encountered double CRLF\n");
                 if ((i+4) < chunk_bytes_received) {
-                    printf("There is more to read after double CRLF, continuing\n");
+                    log_message(DEBUG, "There is more to read after double CRLF, continuing\n");
                     continue;
                 }
-                printf("HTTP request message has been completely read\n");
+                log_message(DEBUG, "HTTP request message has been completely read\n");
                 break;
             }
             if (!rqst_line_read) {
@@ -202,7 +205,7 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size) {
                 protocol_read = 1;
                 rqst_line[i] = '\0';
                 rqst_line_read = 1;
-                printf("Finishing reading request line\n");
+                log_message(DEBUG, "Finishing reading request line\n");
             }
             continue;
         }
@@ -229,10 +232,10 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size) {
         }
     }
 
-    printf("Received request line from client:\n%s\n", rqst_line);
-    printf("Request message method is: %s\n", method);
-    printf("Request message url is: %s\n", url);
-    printf("Request message protocol is: %s\n", protocol);
+    log_message(DEBUG, "Received request line from client:\n%s\n", rqst_line);
+    log_message(DEBUG, "Request message method is: %s\n", method);
+    log_message(DEBUG, "Request message url is: %s\n", url);
+    log_message(DEBUG, "Request message protocol is: %s\n", protocol);
     return NULL;
 }
 

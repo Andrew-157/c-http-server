@@ -7,10 +7,10 @@
 
 // TODO: each level should also be in a variable
 char *LEVELS[4] = {
-    "INFO",
-    "DEBUG",
-    "WARNING",
-    "ERROR"
+    INFO,
+    DEBUG,
+    WARNING,
+    ERROR
 };
 
 /*
@@ -57,6 +57,7 @@ void log_message(char *level, char *msg, ...) {
     } else
         stream = stdout;
 
+    // TODO: print datetime before level
     fprintf(stream, "%s: ", level);
     // NOTE: took it from "The C Programming Language - 2nd Edition"(`minprintf` implementation),
     // it is fine for printing to console, but I don't think it will work well for sending to syslog, for example,
