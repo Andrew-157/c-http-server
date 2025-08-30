@@ -16,18 +16,23 @@
 #define BACKLOG              10     // maximum number of pending connections
 #define RECV_MSG_BUFFER_SIZE 1024   // recv buffer
 
+struct cli_data {
+    int enable_debug;
+};
+
+static struct cli_data cli(int, char **);
+
 void signal_handler(int);
 int create_server_socket(char *);
 char *read_template(char *);
 char *accept_rqst(int, int);
 
 // add atexit maybe
-int main() {
+int main(int argc, char **argv) {
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
 
-    // TODO: enable debug based on cli parameter --debugLog or something like that
-    setupLogger(0);
+    setupLogger(cli(argc, argv).enable_debug);
 
     int server_sockfd;
     server_sockfd = create_server_socket(PORT);
@@ -94,6 +99,36 @@ int main() {
     }
     close(server_sockfd);
     exit(0);
+}
+
+
+static struct cli_data cli(int argc, char **argv) {
+    // NOTE: --debug is kinda bad name for enabling debug messages, debug could also mean prod or non-prod server mode
+    const char *help_text = "Usage: server [OPTIONS]\n\
+A simple HTTP server.\n\
+Options:\n\
+   -d, --debug    Enable debug logging. If flag is not provided, messages with level DEBUG won't be sent to stdout.\n\
+";
+    int debug;
+    debug = 0;
+
+    char *option;
+    if (argc > 1) {
+        option = argv[1];
+        if (strcmp(option, "-h") == 0 || strcmp(option, "--help") == 0) {
+            printf("%s", help_text);
+            exit(0);
+        } else if (strcmp(option, "-d") == 0 || strcmp(option, "--debug") == 0)
+            debug = 1;
+        else {
+            printf("Invalid option: \"%s\". Use -h/--help to see available options.\n", option); // Should it go to stderr?
+            exit(1);
+        }
+    }
+
+    struct cli_data data;
+    data.enable_debug = debug;
+    return data;
 }
 
 void signal_handler(int sig) {
