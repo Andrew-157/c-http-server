@@ -41,15 +41,20 @@ void log_message(char *level, char *msg, ...) {
         }
     }
     if (!level_valid) {
-        // TODO: print valid levels
-        fprintf(stderr, "Invalid severity level \"%s\" for logger\n", level);
+        fprintf(stderr, "Invalid severity level \"%s\" for logger. Valid levels are: [ ", level);
+        for (int i = 0; i < 4; i++) {
+            if (i == 3)
+                fprintf(stderr, "%s ].\n", LEVELS[i]);
+            else
+                fprintf(stderr, "%s, ", LEVELS[i]);
+        }
         exit(1);
     }
 
     FILE *stream; // choose where to send message based on level - stdout or stderr
-    if (strcmp(level, "ERROR") == 0 || strcmp(level, "WARNING") == 0)
+    if (strcmp(level, ERROR) == 0 || strcmp(level, WARNING) == 0)
         stream = stderr;
-    else if (strcmp(level, "DEBUG") == 0) {
+    else if (strcmp(level, DEBUG) == 0) {
         if (atoi(getenv(LOGGER_DEBUG_ENABLED)))
             stream = stdout;
         else
@@ -93,4 +98,3 @@ void log_message(char *level, char *msg, ...) {
     }
     va_end(ap); // clean up when done
 }
-

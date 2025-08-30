@@ -21,6 +21,7 @@ int create_server_socket(char *);
 char *read_template(char *);
 char *accept_rqst(int, int);
 
+// add atexit maybe
 int main() {
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
