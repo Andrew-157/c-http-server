@@ -26,6 +26,7 @@ void setupLogger(int enable_debug) {
 /*
  * log a message
  * */
+// TODO: instead of accepting just `char *msg`, accept a variable length argument list like printf
 void log_message(char *level, char *msg) {
     if (getenv(LOGGER_SETUP_ENV) == NULL) {
         fprintf(stderr, "setupLogger function wasn't called beforehand\n");

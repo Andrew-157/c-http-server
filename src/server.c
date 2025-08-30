@@ -10,6 +10,8 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
+#include "logger.h"
+
 #define PORT            "8080"      // port on which to listen for incoming connections
 #define BACKLOG         10          // maximum number of pending connections
 #define RECV_MSG_BUFFER_SIZE 1024   // recv buffer
