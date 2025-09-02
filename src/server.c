@@ -234,7 +234,11 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size) {
                 rqst_line[i] = '\0';
                 rqst_line_read = 1;
                 log_message(DEBUG, "Finished reading request line\n");
-             }
+                log_message(DEBUG, "Received request line from client:\n%s\n", rqst_line);
+                log_message(DEBUG, "Request message method is: %s\n", method);
+                log_message(DEBUG, "Request message url is: %s\n", url);
+                log_message(DEBUG, "Request message protocol is: %s\n", protocol);
+            }
              if ((i+3) < chunk_bytes_received && recv_msg[i+2] == '\r' && recv_msg[i+3] == '\n') {
                  log_message(DEBUG, "Encountered double CRLF\n");
                  if ((i+4) < chunk_bytes_received) {
@@ -268,10 +272,6 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size) {
         }
     }
 
-    log_message(DEBUG, "Received request line from client:\n%s\n", rqst_line);
-    log_message(DEBUG, "Request message method is: %s\n", method);
-    log_message(DEBUG, "Request message url is: %s\n", url);
-    log_message(DEBUG, "Request message protocol is: %s\n", protocol);
     return NULL;
 }
 

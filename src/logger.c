@@ -91,6 +91,10 @@ void log_message(char *level, char *msg, ...) {
                 for (sval = va_arg(ap, char *); *sval; sval++)
                     fprintf(stream, "%c", *sval);
                 break;
+            case 'c':
+                ival = va_arg(ap, int);
+                fprintf(stream, "%c", ival);
+                break;
             default:
                 fprintf(stream, "%c", *p);
                 break;
