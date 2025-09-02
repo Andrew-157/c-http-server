@@ -228,23 +228,22 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size) {
     for (int i = 0; i < chunk_bytes_received; i++) {
         if ((recv_msg[i] == '\r') && ((i+1) < chunk_bytes_received) && (recv_msg[i+1] == '\n')) {
             log_message(DEBUG, "Encountered CRLF\n");
-            if ((i+3) < chunk_bytes_received && recv_msg[i+2] == '\r' && recv_msg[i+3] == '\n') {
-                log_message(DEBUG, "Encountered double CRLF\n");
-                if ((i+4) < chunk_bytes_received) {
-                    log_message(DEBUG, "There is more to read after double CRLF, continuing\n");
-                    continue;
-                }
-                log_message(DEBUG, "HTTP request message has been completely read\n");
-                break;
-            }
             if (!rqst_line_read) {
                 protocol[j] = '\0';
                 protocol_read = 1;
                 rqst_line[i] = '\0';
                 rqst_line_read = 1;
-                log_message(DEBUG, "Finishing reading request line\n");
-            }
-            continue;
+                log_message(DEBUG, "Finished reading request line\n");
+             }
+             if ((i+3) < chunk_bytes_received && recv_msg[i+2] == '\r' && recv_msg[i+3] == '\n') {
+                 log_message(DEBUG, "Encountered double CRLF\n");
+                 if ((i+4) < chunk_bytes_received) {
+                     log_message(DEBUG, "There is more to read after double CRLF, continuing\n");
+                     continue;
+                 }
+                 log_message(DEBUG, "HTTP request message has been completely read\n");
+                 break;
+             }
         }
         if (!rqst_line_read)
             rqst_line[i] = recv_msg[i];
