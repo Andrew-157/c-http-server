@@ -228,17 +228,8 @@ char * accept_rqst(int client_sockfd, int recv_msg_buffer_size) {
     // utils for reading headers
     char curr_header[100]; // variable to store one header at a time
 
-    // int curr;
-
     int j = 0; // index for keeping track of element in method, url, protocol
     for (int i = 0; i < chunk_bytes_received; i++) {
-        //curr = recv_msg[i];
-        //if (curr == '\n')
-        //    log_message(DEBUG, "Current character is newline\n");
-        //else if (curr == '\r')
-        //    log_message(DEBUG, "Current character is carriage return\n");
-        //else
-        //    log_message(DEBUG, "Current character is: %c\n", curr);
         if ((recv_msg[i] == '\r') && ((i+1) < chunk_bytes_received) && (recv_msg[i+1] == '\n')) {
             log_message(DEBUG, "Encountered CRLF\n");
             if (!rqst_line_read) {
