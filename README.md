@@ -84,6 +84,8 @@ References:
 
 ## Client For Testing
 
+> `TODO:` Consider using(or taking inspiration from): [posting](https://github.com/darrenburns/posting)
+
 Client program that provides a way to test the server.
 
 More see [here](./testing/testcases.md).
