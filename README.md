@@ -4,6 +4,7 @@
 - [How To Read HTTP Request from Socket](#how-to-read-http-request-from-socket)
 - [Inside a Virtual Machine](#inside-a-virtual-machine)
 - [Caching](#caching)
+- [Encoding](#encoding)
 - [Client For Testing](#client-for-testing)
 - [Future Features To Be Implemented](#future-features-to-be-implemented)
 
@@ -86,6 +87,16 @@ References:
 ## Caching
 
 `WORK IN PROGRESS`
+
+---
+
+## Encoding
+
+- Content-Coding vs Transfer-Coding
+
+As I understand, "Content-Coding" means that body itself is encoded, for example in `gzip` format. While "Transfer-Coding" means that that gzipped body may be chunked.
+
+- Chunked Transfer Coding
 
 ---
 

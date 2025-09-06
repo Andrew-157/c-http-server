@@ -28,6 +28,8 @@ void setupLogger(int enable_debug) {
  * log a message
  * */
 // TODO: extend accepted formatting options
+// TODO: handle sending messages to syslog
+// TODO: handle sending messages to remote syslog
 void log_message(char *level, char *msg, ...) {
     if (getenv(LOGGER_SETUP_ENV) == NULL) {
         fprintf(stderr, "setupLogger function wasn't called beforehand\n");
