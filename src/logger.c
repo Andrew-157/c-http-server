@@ -30,6 +30,9 @@ void setupLogger(int enable_debug) {
 // TODO: extend accepted formatting options
 // TODO: handle sending messages to syslog
 // TODO: handle sending messages to remote syslog
+// TODO: if server in the end will be handling multiple connections simultaneously,
+// maybe it is worth to specify in logged messages, to which connection a particular message
+// relates?
 void log_message(char *level, char *msg, ...) {
     if (getenv(LOGGER_SETUP_ENV) == NULL) {
         fprintf(stderr, "setupLogger function wasn't called beforehand\n");
