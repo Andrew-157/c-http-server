@@ -5,6 +5,7 @@
 - [Inside a Virtual Machine](#inside-a-virtual-machine)
 - [Caching](#caching)
 - [Encoding](#encoding)
+- [Proxy Mode](#proxy-mode)
 - [Client For Testing](#client-for-testing)
 - [Future Features To Be Implemented](#future-features-to-be-implemented)
 
@@ -97,6 +98,12 @@ References:
 As I understand, "Content-Coding" means that body itself is encoded, for example in `gzip` format. While "Transfer-Coding" means that that gzipped body may be chunked.
 
 - Chunked Transfer Coding
+
+---
+
+## Proxy Mode
+
+`WORK IN PROGRESS`
 
 ---
 

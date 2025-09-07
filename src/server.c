@@ -75,6 +75,7 @@ int main(int argc, char **argv) {
         }
 
         inet_ntop(client_address.sin_family, &client_address.sin_addr, printable_ip, sizeof(printable_ip));
+        // TODO: try to also print hostname of the client, if possible
         log_message(INFO, "Accepted client connection from IP(%s):PORT(%d)\n", printable_ip, ntohs(client_address.sin_port));
 
         accept_rqst(client_sockfd, RECV_MSG_BUFFER_SIZE);
