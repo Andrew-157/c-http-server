@@ -5,6 +5,7 @@
 - [Inside a Virtual Machine](#inside-a-virtual-machine)
 - [Caching](#caching)
 - [Encoding](#encoding)
+- [Persistent Connections And Pipelining](#persistent-connections-and-pipelining)
 - [Proxy Mode](#proxy-mode)
 - [Client For Testing](#client-for-testing)
 - [Future Features To Be Implemented](#future-features-to-be-implemented)
@@ -96,6 +97,12 @@ References:
 - Content-Coding vs Transfer-Coding
 
 As I understand, "Content-Coding" means that body itself is encoded, for example in `gzip` format. While "Transfer-Coding" means that that gzipped body may be chunked.
+
+---
+
+## Persistent Connections And Pipelining
+
+`WORK IN PROGRESS`
 
 - Chunked Transfer Coding
 
