@@ -1,7 +1,7 @@
 # Implementing HTTP Server in C
 
 ## Table of Contents
-- [Request Handling](#)
+- [Request Handling](#request-handling)
 - [Inside a Virtual Machine](#inside-a-virtual-machine)
 - [Caching](#caching)
 - [Encoding](#encoding)
