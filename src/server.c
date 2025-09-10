@@ -11,10 +11,10 @@
 #include <arpa/inet.h>
 
 #include "logger.h"
+#include "request_handling.h"
 
 #define PORT                 "8080" // port on which to listen for incoming connections
 #define BACKLOG              10     // maximum number of pending connections
-#define RECV_MSG_BUFFER_SIZE 1024   // recv buffer
 
 struct cli_data {
     int enable_debug;
@@ -25,7 +25,6 @@ static struct cli_data cli(int, char **);
 void signal_handler(int);
 int create_server_socket(char *);
 char *read_template(char *);
-char *accept_rqst(int, int);
 
 // add atexit maybe
 int main(int argc, char **argv) {
@@ -78,7 +77,7 @@ int main(int argc, char **argv) {
         // TODO: try to also print hostname of the client, if possible
         log_message(INFO, "Accepted client connection from IP(%s):PORT(%d)\n", printable_ip, ntohs(client_address.sin_port));
 
-        accept_rqst(client_sockfd, RECV_MSG_BUFFER_SIZE);
+        accept_rqst(client_sockfd);
 
         log_message(INFO, "Sending an HTTP response to client with HTML body\n");
 
