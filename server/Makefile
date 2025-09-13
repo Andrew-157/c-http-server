@@ -11,4 +11,4 @@ server.o: server.c
 	gcc -c -Wall server.c -o server.o
 
 clean:
-	rm -f *o *out
+	rm -f *o *out test.c

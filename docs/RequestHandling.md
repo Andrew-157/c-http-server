@@ -3,6 +3,8 @@
 ## Table of Contents
 
 - [Miscellaneous](#miscellaneous)
+  - [Persistent Connections](#persistent-connections)
+  - [For how long to read request line and headers](#for-how-long-to-read-request-line-and-headers)
 - [Request Line](#request-line)
   - [Request Method](#request-method)
   - [Request URI](#request-uri)
@@ -11,6 +13,8 @@
 ---
 
 ## Miscellaneous
+
+### Persistent Connections
 
 One of the first important things to be decided when handling a request is whether the connection should be persistent or not.
 
@@ -29,7 +33,11 @@ So, when parsing the request, the header "Connection: close" indicates the sende
 
 > `NOTE`: What will happen with the client socket on the server side if client closes the connection? It is for situation when client doesn't send "Connection: close", so that we assume the they want to keep the connection open, but they close the connection.
 
-What if the header contains some token other than close?
+What if the header contains some token other than close? - then close the connection, I don't think 4xx should be sent, but if client sends some shady values for headers, it is better to close the connection with that client.
+
+### For how long to read request line and headers
+
+Okay, when reading body, we have Content-Length and Transfer-Coding, what if buffer size for recv is too small for receiving whole request line and headers, how many more times should I call recv? Should I just let it timeout and if errno is a certain value assume that we are done? I guess if it times out it means we didn't read double CRLF and didn't get Content-Length or Transfer-Coding, so the request is malformed and we can send 4xx and it is not that big of a deal for a client to wait for ~1 sec, since they are receiving error anyway.
 
 ---
 
