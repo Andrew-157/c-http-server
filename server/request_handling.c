@@ -14,9 +14,7 @@
 #include "request_handling.h"
 
 
-// actually, make buffer size configurable as it would enable better testing
-char * accept_rqst(int client_sockfd) {
-
+char * accept_rqst(int client_sockfd, int buffer_size) {
     char *method = NULL;
     char *uri = NULL;
     char *http_version = NULL;
@@ -26,7 +24,6 @@ char * accept_rqst(int client_sockfd) {
     char *rspns_msg;
     char *content_type;
 
-    int buffer_size = 1024;
     char recv_msg[buffer_size];
     int bytes_received;
 

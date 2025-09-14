@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -13,11 +14,14 @@
 #include "logger.h"
 #include "request_handling.h"
 
-#define PORT                 "8080" // port on which to listen for incoming connections
-#define BACKLOG              10     // maximum number of pending connections
+#define PORT        "8080" // port on which to listen for incoming connections
+#define BACKLOG     10     // maximum number of pending connections
+
+#define BUFFER_SIZE 1024 // default buffer size, will be moved somewhere later
 
 struct cli_data {
     int enable_debug;
+    int buffer_size;
 };
 
 static struct cli_data cli(int, char **);
@@ -31,7 +35,9 @@ int main(int argc, char **argv) {
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
 
-    setupLogger(cli(argc, argv).enable_debug);
+    struct cli_data data = cli(argc, argv);
+
+    setupLogger(data.enable_debug);
 
     int server_sockfd;
     server_sockfd = create_server_socket(PORT);
@@ -77,7 +83,7 @@ int main(int argc, char **argv) {
         // TODO: try to also print hostname of the client, if possible
         log_message(INFO, "Accepted client connection from IP(%s):PORT(%d)\n", printable_ip, ntohs(client_address.sin_port));
 
-        accept_rqst(client_sockfd);
+        accept_rqst(client_sockfd, data.buffer_size);
 
         log_message(INFO, "Sending an HTTP response to client with HTML body\n");
 
@@ -107,27 +113,50 @@ static struct cli_data cli(int argc, char **argv) {
     const char *help_text = "Usage: server [OPTIONS]\n\
 A simple HTTP server.\n\
 Options:\n\
-   -d, --debug    Enable debug logging. If flag is not provided, messages with level DEBUG won't be sent to stdout.\n\
+   -d, --debug     Enable debug logging. If flag is not provided, messages with level DEBUG won't be sent to stdout.\n\
+   -b, --buff-size Receive buffer size. If not provided, default value of %d will be used.\n\
 ";
-    int debug;
+    int debug = 0;
+    int buffer_size = -1; // not a valid value, simply a value to detect that buffer_size was already provided, as
+                          // values of 0 and -1 are not valid values for buffer_size and we won't let user set them
     debug = 0;
 
     char *option;
-    if (argc > 1) {
-        option = argv[1];
+    for (int i = 1; i < argc; i++) {
+        option = argv[i];
         if (strcmp(option, "-h") == 0 || strcmp(option, "--help") == 0) {
-            printf("%s", help_text);
+            printf(help_text, BUFFER_SIZE);
             exit(0);
-        } else if (strcmp(option, "-d") == 0 || strcmp(option, "--debug") == 0)
-            debug = 1;
-        else {
-            printf("Invalid option: \"%s\". Use -h/--help to see available options.\n", option); // Should it go to stderr?
-            exit(1);
+        } else if (strcmp(option, "-b") == 0 || strcmp(option, "--buffer-size") == 0) {
+            if (buffer_size != -1) {
+                printf("-b/--buffer-size option was provided twice.\n");
+                exit(1);
+            }
+            if ((i+1) == argc) {
+                printf("-b/--buffer-size option used without a value.\n");
+                exit(1);
+            }
+            if (strcmp(argv[i+1], "-h") == 0 || strcmp(argv[i+1], "--help") == 0) {
+                printf("help text for --buffer-size\n");
+                exit(0);
+            }
+            for (int j = 0; j < strlen(argv[i+1]); j++) {
+                if (!isdigit(argv[i+1][j])) {
+                    printf("-b/--buffer-size must be a positive integer.\n");
+                    exit(1);
+                }
+            }
+            buffer_size = atoi(argv[i+1]);
+            if (buffer_size == 0) {
+                printf("-b/--buffer-size must be a positive integer.\n");
+                exit(1);
+            }
         }
     }
 
     struct cli_data data;
     data.enable_debug = debug;
+    data.buffer_size  = buffer_size;
     return data;
 }
 
