@@ -83,7 +83,7 @@ According to [HTTP/1.1 RFC](#https://datatracker.ietf.org/doc/html/rfc2616#secti
    than the server can handle
 ```
 
-So, I will try to handle url of any length, but if it proves too hard, I will set some configurable max length for the url. Should it be configurable by the user that url can be limitless? Wouldn't it be a backdoor for an attack, like you send a gigabyte long request uri and consume all memory of the server?
+So, max uri length should be generated automatically I guess based on the longest uri of all resources served by the server.
 
 ### HTTP Version
 
