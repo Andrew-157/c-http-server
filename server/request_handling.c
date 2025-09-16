@@ -44,37 +44,10 @@ char * accept_rqst(int client_sockfd, int buffer_size) {
 
         log_message(INFO, "Bytes received: %d\n", bytes_received);
 
-        char buff;
-        for (int i = 0; i < bytes_received; i++) {
-            buff = recv_msg[i];
-            if (buff == '\r') {
-                if ((i+1) < bytes_received) {
-                    if (recv_msg[i+1] != '\n') {
-                        // '\r' is valid as a standalone character only in the context of the body, which,
-                        // for now at least, I don't think I am going to validate character by character
-                        status_code = 400;
-                        if (!rqst_line_received)
-                            rspns_msg = "Carriage Return character was encountered outside of CRLF in request line\n";
-                        else
-                            rspns_msg = "Carriage Return character was encountered outside of CRLF in a header\n";
-                        content_type = "text/html; charset=utf-8";
-                        break;
-                    } else {
-                        // encountered CRLF - remember that you can encounter CRLF in the context of LWS in a header
-                    }
-                } else {
-                    // There are 2 possible outcomes:
-                    // - request is over and it is invalid
-                    // - there is more to read, so we need to call recv again
-                    // if we are going to call recv more, we need some state variable, like `char last_read_char;`
-                }
-            } else if (buff == '\n') {
-                // it means request is definitely invalid, because if it was part of CRLF, we should have
-                // handled it in the condition above
-            } else if (buff == ' ') {
-            } else if (buff == '\t') {
-               // tab MAY be encountered in the context of LWS, which MAY be encountered in the context of a header
-            } else {}
-        }
+        // Do not try, for now, to parse whole request in one loop
+        // divide parsing into separate loops for request line, headers and body
+        // - put parts of the request line into a struct
+        // - use hash table for headers
+
     }
 }
