@@ -44,10 +44,5 @@ char * accept_rqst(int client_sockfd, int buffer_size) {
 
         log_message(INFO, "Bytes received: %d\n", bytes_received);
 
-        // Do not try, for now, to parse whole request in one loop
-        // divide parsing into separate loops for request line, headers and body
-        // - put parts of the request line into a struct
-        // - use hash table for headers
-
     }
 }

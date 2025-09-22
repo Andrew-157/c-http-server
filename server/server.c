@@ -20,7 +20,7 @@
 #define BUFFER_SIZE 1024 // default buffer size, will be moved somewhere later
 
 struct cli_data {
-    int enable_debug;
+    int verbose;
     int buffer_size;
 };
 
@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
 
     struct cli_data data = cli(argc, argv);
 
-    setupLogger(data.enable_debug);
+    setupLogger(data.verbose);
 
     int server_sockfd;
     server_sockfd = create_server_socket(PORT);
@@ -109,17 +109,15 @@ int main(int argc, char **argv) {
 
 
 static struct cli_data cli(int argc, char **argv) {
-    // NOTE: --debug is kinda bad name for enabling debug messages, debug could also mean prod or non-prod server mode
     const char *help_text = "Usage: server [OPTIONS]\n\
 A simple HTTP server.\n\
 Options:\n\
-   -d, --debug     Enable debug logging. If flag is not provided, messages with level DEBUG won't be sent to stdout.\n\
-   -b, --buff-size Receive buffer size. If not provided, default value of %d will be used.\n\
+   -v, --verbose     Enable verbose logging. If flag is not provided, messages with level DEBUG won't be sent to stdout.\n\
+   -b, --buff-size   Receive buffer size. If not provided, default value of %d will be used.\n\
 ";
-    int debug = 0;
+    int verbose = 0;      // this option is store_true (in argparse terminology), so if it is not 0, it means user provided it twice
     int buffer_size = -1; // not a valid value, simply a value to detect that buffer_size was already provided, as
                           // values of 0 and -1 are not valid values for buffer_size and we won't let user set them
-    debug = 0;
 
     char *option;
     for (int i = 1; i < argc; i++) {
@@ -151,11 +149,25 @@ Options:\n\
                 printf("-b/--buffer-size must be a positive integer.\n");
                 exit(1);
             }
+            i++;
+        } else if (strcmp(option, "-v") == 0 || strcmp(option, "--verbose") == 0) {
+            if (verbose) {
+                printf("-v/--verbose option was provided twice.\n");
+                exit(1);
+            }
+            if (i < (argc-1) && (strcmp(argv[i+1], "-h") == 0 || strcmp(argv[i+1], "--help") == 0)) {
+                printf("help text for --verbose\n");
+                exit(0);
+            }
+            verbose = 1;
+        } else {
+            printf("Invalid option: %s, use -h/--help to see available options.\n", option);
+            exit(1);
         }
     }
 
     struct cli_data data;
-    data.enable_debug = debug;
+    data.verbose = verbose;
     data.buffer_size  = buffer_size;
     return data;
 }
