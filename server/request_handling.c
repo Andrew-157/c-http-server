@@ -13,6 +13,9 @@
 #include "logger.h"
 #include "request_handling.h"
 
+struct request {
+
+};
 
 char * accept_rqst(int client_sockfd, int buffer_size) {
     char *method = NULL;
