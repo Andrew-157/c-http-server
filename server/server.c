@@ -168,7 +168,11 @@ Options:\n\
 
     struct cli_data data;
     data.verbose = verbose;
-    data.buffer_size  = buffer_size;
+    if (buffer_size < 0) {
+        data.buffer_size = BUFFER_SIZE;
+    } else {
+        data.buffer_size = buffer_size;
+    }
     return data;
 }
 
