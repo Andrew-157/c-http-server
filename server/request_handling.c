@@ -16,14 +16,17 @@
 struct rqstLine {
     char *method;
     int method_len;
+    int max_method_len;
     int method_recvd;
 
     char *url;
     int url_len;
+    int max_url_len;
     int url_recvd;
 
     char *protocol;
     int protocol_len;
+    int max_protocol_len;
     int protocol_recvd;
 };
 
