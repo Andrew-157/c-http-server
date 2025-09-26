@@ -30,7 +30,7 @@ struct rqstLine {
     int protocol_recvd;
 };
 
-#define RQST_LINE_INIT {NULL, 0, 0, NULL, 0, 0, NULL, 0, 0}
+#define RQST_LINE_INIT {NULL, 0, 0, 0, NULL, 0, 0, 0, NULL, 0, 0, 0}
 
 static void appendRqstLine(struct rqstLine *, const char *, int);
 
@@ -67,6 +67,9 @@ char * accept_rqst(int client_sockfd, int buffer_size) {
                     rl.url_recvd = 1;
                 }
             } else if (c == '\r') {
+                if (!rl.method_recvd || !rl.url_recvd) {
+                    // send error
+                }
                 if (!rl.protocol_recvd) {
                    rl.protocol_recvd = 1;
                    recved = 1;
