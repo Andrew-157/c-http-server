@@ -72,6 +72,7 @@ void log_message(char *level, char *msg, ...) {
     // NOTE: took it from "The C Programming Language - 2nd Edition"(`minprintf` implementation),
     // it is fine for printing to console, but I don't think it will work well for sending to syslog, for example,
     // as I am printing here one character at a time, so it will have to be reworked, but for now it is okay
+    // TODO: use realloc to generate a string to print instead of printing each character one by one
     va_list ap; // points to each unnamed arg in turn
     char *p, *sval;
     int ival;
