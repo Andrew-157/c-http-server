@@ -10,6 +10,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
+#include "consts.h"
 #include "logger.h"
 #include "request_handling.h"
 
@@ -82,9 +83,11 @@ void accept_rqst(int client_sockfd, int buffer_size) {
             // We cannot know if timeout, for example, occurred due to client not sending anything anymore
             // and us trying to read or because of faulty connection, so to make matters simple, at least for now,
             // let's just send assume error on the server side
-            populateResp(&rp, 500, "text/plain", "server failed to read client request\r\n");
+            populateResp(&rp, INTERNAL_SERVER_ERROR, TEXT_PLAIN, "server failed to read client request\r\n");
             break;
         }
+
+        log_message(DEBUG, "Bytes received: %d\n", bytes_received);
 
         if (!rqst_line_recved) {
              while (i < bytes_received) {
@@ -96,7 +99,7 @@ void accept_rqst(int client_sockfd, int buffer_size) {
                          rl.uri_recvd = 1;
                      } else {
                          // i think rfc said that request line can start with space or crlf, but im not sure
-                         populateResp(&rp, 400, "text/plain", "' ' character encountered not as a separator between method, uri and protocol\r\n");
+                         populateResp(&rp, BAD_REQUEST, TEXT_PLAIN, "' ' character encountered not as a separator between method, uri and protocol\r\n");
                          break;
                      }
                      prev_c = ' ';
@@ -105,7 +108,7 @@ void accept_rqst(int client_sockfd, int buffer_size) {
                          prev_c = '\r';
                          break;
                      } else if (recv_msg[i+1] != '\n') {
-                         populateResp(&rp, 400, "text/plain", "'\\r' character encountered not as part of CRLF in Request Line\r\n");
+                         populateResp(&rp, BAD_REQUEST, TEXT_PLAIN, "'\\r' character encountered not as part of CRLF in Request Line\r\n");
                          break;
                      } else {
                          i++;
@@ -116,7 +119,7 @@ void accept_rqst(int client_sockfd, int buffer_size) {
                      }
                  } else if (c == '\n') {
                      if (prev_c != '\r') {
-                         populateResp(&rp, 400, "text/plain", "'\\n' character encountered not as part of CRLF in Request Line\r\n");
+                         populateResp(&rp, BAD_REQUEST, TEXT_PLAIN, "'\\n' character encountered not as part of CRLF in Request Line\r\n");
                          break;
                      }
                      rl.protocol_recvd = 1;
@@ -125,17 +128,17 @@ void accept_rqst(int client_sockfd, int buffer_size) {
                      break;
                  } else if (c == '\t') {
                      // i don't think tab is valid anywhere in the request line
-                     populateResp(&rp, 400, "text/plain", "'\\t' character encountered in request line\r\n");
+                     populateResp(&rp, BAD_REQUEST, TEXT_PLAIN, "'\\t' character encountered in request line\r\n");
                      break;
                  } else {
                      if (!rl.method_recvd && (rl.method_len+1) > rl.max_method_len) {
-                         populateResp(&rp, 400, "text/plain", "method is too long\r\n");
+                         populateResp(&rp, BAD_REQUEST, TEXT_PLAIN, "method is too long\r\n");
                          break;
                      } else if (!rl.uri_recvd && (rl.uri_len+1) > rl.max_uri_len) {
-                         populateResp(&rp, 414, "text/plain", "URI is too large - server refused to process it.\r\n");
+                         populateResp(&rp, URI_TOO_LONG, TEXT_PLAIN, "URI is too large - server refused to process it.\r\n");
                          break;
                      } else if (!rl.protocol_recvd && (rl.protocol_len+1) > rl.max_protocol_len) {
-                         populateResp(&rp, 400, "text/plain", "protocol is too long\r\n");
+                         populateResp(&rp, BAD_REQUEST, TEXT_PLAIN, "protocol is too long\r\n");
                          break;
                      }
                      char append_buf[2];
@@ -191,7 +194,7 @@ static void validateRqstLine(struct rqstLine *rl, struct resp *rp) {
     // validate and compose a response;
     char buf[100];
     snprintf(buf, sizeof(buf), "Method: %s\nURI: %s\nProtocol: %s\r\n", rl->method, rl->uri, rl->protocol);
-    populateResp(rp, 200, "text/plain", buf);
+    populateResp(rp, OK, TEXT_PLAIN, buf);
 }
 
 static void populateResp(struct resp *rp, int status_code, char *content_type, char *body) {
