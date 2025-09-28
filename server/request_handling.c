@@ -39,6 +39,7 @@ struct resp {
 
 static void appendRqstLine(struct rqstLine *, const char *, int);
 static void validateRqstLine(struct rqstLine *, struct resp *);
+static void populateResp(struct resp *, int, char *, char *);
 static char *read_template(char *);
 
 void accept_rqst(int client_sockfd, int buffer_size) {
@@ -81,10 +82,7 @@ void accept_rqst(int client_sockfd, int buffer_size) {
             // We cannot know if timeout, for example, occurred due to client not sending anything anymore
             // and us trying to read or because of faulty connection, so to make matters simple, at least for now,
             // let's just send assume error on the server side
-            rp.status_code = 500;
-            rp.content_type = "text/plain";
-            rp.body = "server failed to read client request\r\n";
-            rp.resp_composed = 1;
+            populateResp(&rp, 500, "text/plain", "server failed to read client request\r\n");
             break;
         }
 
@@ -98,65 +96,46 @@ void accept_rqst(int client_sockfd, int buffer_size) {
                          rl.uri_recvd = 1;
                      } else {
                          // i think rfc said that request line can start with space or crlf, but im not sure
-                         rp.status_code = 400;
-                         rp.content_type = "text/plain";
-                         rp.body = "' ' character encountered not as a separator between method, uri and protocol\r\n";
-                         rp.resp_composed = 1;
+                         populateResp(&rp, 400, "text/plain", "' ' character encountered not as a separator between method, uri and protocol\r\n");
                          break;
                      }
                      prev_c = ' ';
                  } else if (c == '\r') {
-                     if ((i+1) > (bytes_received)) {
+                     if ((i+1) > (bytes_received-1)) {
                          prev_c = '\r';
                          break;
                      } else if (recv_msg[i+1] != '\n') {
-                         rp.status_code = 400;
-                         rp.content_type = "text/plain";
-                         rp.body = "'\\r' character encountered not as part of CRLF\r\n";
-                         rp.resp_composed = 1;
+                         populateResp(&rp, 400, "text/plain", "'\\r' character encountered not as part of CRLF in Request Line\r\n");
                          break;
                      } else {
                          i++;
-                         // we need to validate received request line - whether method and protocol are supported
+                         rl.protocol_recvd = 1;
                          rqst_line_recved = 1;
+                         validateRqstLine(&rl, &rp);
                          break;
                      }
                  } else if (c == '\n') {
                      if (prev_c != '\r') {
-                         rp.status_code = 400;
-                         rp.content_type = "text/plain";
-                         rp.body = "'\\n' character encountered not as part of CRLF\r\n";
-                         rp.resp_composed = 1;
+                         populateResp(&rp, 400, "text/plain", "'\\n' character encountered not as part of CRLF in Request Line\r\n");
                          break;
                      }
-                     // we need to validate received request line - whether method and protocol are supported
+                     rl.protocol_recvd = 1;
                      rqst_line_recved = 1;
+                     validateRqstLine(&rl, &rp);
                      break;
                  } else if (c == '\t') {
                      // i don't think tab is valid anywhere in the request line
-                     rp.status_code = 400;
-                     rp.content_type = "text/plain";
-                     rp.body = "'\\t' character encountered in request line\r\n";
-                     rp.resp_composed = 1;
+                     populateResp(&rp, 400, "text/plain", "'\\t' character encountered in request line\r\n");
                      break;
                  } else {
                      if (!rl.method_recvd && (rl.method_len+1) > rl.max_method_len) {
-                         rp.status_code = 400;
-                         rp.content_type = "text/plain";
-                         rp.body = "method is too long\r\n";
-                         rp.resp_composed = 1;
+                         populateResp(&rp, 400, "text/plain", "method is too long\r\n");
                          break;
                      } else if (!rl.uri_recvd && (rl.uri_len+1) > rl.max_uri_len) {
-                         rp.status_code = 414;
-                         rp.content_type = "text/plain";
-                         rp.body = "URI is too large - server refused to process it.\r\n";
-                         rp.resp_composed = 1;
+                         populateResp(&rp, 414, "text/plain", "URI is too large - server refused to process it.\r\n");
                          break;
                      } else if (!rl.protocol_recvd && (rl.protocol_len+1) > rl.max_protocol_len) {
-                         rp.status_code = 400;
-                         rp.content_type = "text/plain";
-                         rp.body = "protocol is too long\r\n";
-                         rp.resp_composed = 1;
+                         populateResp(&rp, 400, "text/plain", "protocol is too long\r\n");
                          break;
                      }
                      char append_buf[2];
@@ -170,14 +149,17 @@ void accept_rqst(int client_sockfd, int buffer_size) {
 
         if (rp.resp_composed) {
             // response was composed - send it and exit
+            char response[200];
+            snprintf(response, sizeof(response), "HTTP/1.1 %d Phrase\r\nContent-Type: %s\r\nContent-Length: %ld\r\n\r\n%s",
+                rp.status_code, rp.content_type, strlen(rp.body), rp.body);
+            send(client_sockfd, response, strlen(response), 0);
         }
     }
 
-    log_message(INFO, "Method: %s, URL: %s, Protocol: %s\n", rl.method, rl.uri, rl.protocol);
+    close(client_sockfd);
     free(rl.method);
     free(rl.uri);
     free(rl.protocol);
-    return NULL;
 }
 
 static void appendRqstLine(struct rqstLine *rl,  const char *s, int len) {
@@ -205,8 +187,18 @@ static void appendRqstLine(struct rqstLine *rl,  const char *s, int len) {
 
 // if request line is valid - does nothing
 // else - sets erroneous response
-static void validateRqstLine() {
-    
+static void validateRqstLine(struct rqstLine *rl, struct resp *rp) {
+    // validate and compose a response;
+    char buf[100];
+    snprintf(buf, sizeof(buf), "Method: %s\nURI: %s\nProtocol: %s\r\n", rl->method, rl->uri, rl->protocol);
+    populateResp(rp, 200, "text/plain", buf);
+}
+
+static void populateResp(struct resp *rp, int status_code, char *content_type, char *body) {
+    rp->status_code = status_code;
+    rp->content_type = content_type;
+    rp->body = body;
+    rp->resp_composed = 1;
 }
 
 static char *read_template(char *template_path) {

@@ -28,7 +28,6 @@ static struct cli_data cli(int, char **);
 
 void signal_handler(int);
 int create_server_socket(char *);
-char *read_template(char *);
 
 // add atexit maybe
 int main(int argc, char **argv) {
@@ -85,23 +84,23 @@ int main(int argc, char **argv) {
 
         accept_rqst(client_sockfd, data.buffer_size);
 
-        log_message(INFO, "Sending an HTTP response to client with HTML body\n");
+        //log_message(INFO, "Sending an HTTP response to client with HTML body\n");
 
-        char *html = read_template("./templates/index.html");
-        if (html == NULL) {
-            log_message(ERROR, "Failed to open html template: %s\n", strerror(errno));
-            close(client_sockfd);
-            close(server_sockfd);
-            exit(errno);
-        }
+        //char *html = read_template("./templates/index.html");
+        //if (html == NULL) {
+        //    log_message(ERROR, "Failed to open html template: %s\n", strerror(errno));
+        //    close(client_sockfd);
+        //    close(server_sockfd);
+        //    exit(errno);
+        //}
 
-        char *http_response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 232\r\n\r\n";
-        send(client_sockfd, http_response, strlen(http_response), 0);
-        send(client_sockfd, html, strlen(html), 0);
-        free(html);
+        //char *http_response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 232\r\n\r\n";
+        //send(client_sockfd, http_response, strlen(http_response), 0);
+        //send(client_sockfd, html, strlen(html), 0);
+        //free(html);
 
-        log_message(INFO, "Ending communication\n\n");
-        close(client_sockfd);
+        //log_message(INFO, "Ending communication\n\n");
+        //close(client_sockfd);
     }
     close(server_sockfd);
     exit(0);
@@ -226,21 +225,3 @@ int create_server_socket(char *port) {
     freeaddrinfo(servinfo); // all done with this structure
     return sockfd;
 }
-
-char *read_template(char *template_path) {
-    FILE *file;
-    if ((file = fopen(template_path, "r")) == NULL) return NULL;
-    fseek(file, 0, SEEK_END); // Moves file pointer to the end of the file
-    int length = ftell(file);
-    fseek(file, 0, SEEK_SET); // Moves file pointer back to the beginning of the file
-
-    char *html = malloc(sizeof(char) * (length + 1)); // length + 1 because of '\0'
-    int c, i;
-    i = 0;
-    while ((c = getc(file)) != EOF) // it could be `fgetc` instead of `getc`
-        html[i++] = c;
-    html[i] = '\0';
-    fclose(file);
-    return html;
-}
-
