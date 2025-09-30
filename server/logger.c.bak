@@ -13,20 +13,6 @@ char *LEVELS[4] = {
     ERROR
 };
 
-struct printBuf {
-    char *b;
-    int len;
-};
-
-static void printBufAppend(struct printBuf *pb, const char *s, int len) {
-    char *new = realloc(pb->b, pb->len + len);
-
-    if (new == NULL) return;
-    memcpy(&new[pb->len], s, len);
-    pb->b = new;
-    pb->len += len;
-}
-
 /*
  * Set up logger - idk, i need to learn how to write docstrings
  * */
@@ -81,51 +67,44 @@ void log_message(char *level, char *msg, ...) {
     } else
         stream = stdout;
 
+    // TODO: print datetime before level
+    fprintf(stream, "%s: ", level);
+    // NOTE: took it from "The C Programming Language - 2nd Edition"(`minprintf` implementation),
+    // it is fine for printing to console, but I don't think it will work well for sending to syslog, for example,
+    // as I am printing here one character at a time, so it will have to be reworked, but for now it is okay
+    // TODO: use realloc to generate a string to print instead of printing each character one by one
     va_list ap; // points to each unnamed arg in turn
     char *p, *sval;
     int ival;
     double dval;
-    struct printBuf pb = {NULL, 0};
-    char buf[64];
 
     va_start(ap, msg); // make ap point to 1st unnamed arg
     for (p = msg; *p; p++) {
         if (*p != '%') {
-            snprintf(buf, sizeof(buf), "%c", *p);
-            printBufAppend(&pb, buf, strlen(buf));
+            fprintf(stream, "%c", *p);
             continue;
         }
         switch (*++p) {
             case 'd':
                 ival = va_arg(ap, int);
-                snprintf(buf, sizeof(buf), "%d", ival);
-                printBufAppend(&pb, buf, strlen(buf));
+                fprintf(stream, "%d", ival);
                 break;
             case 'f':
                 dval = va_arg(ap, double);
-                snprintf(buf, sizeof(buf), "%f", dval);
-                printBufAppend(&pb, buf, strlen(buf));
+                fprintf(stream, "%f", dval);
                 break;
             case 's':
-                for (sval = va_arg(ap, char *); *sval; sval++) {
-                    snprintf(buf, sizeof(buf), "%c", *sval);
-                    printBufAppend(&pb, buf, strlen(buf));
-                }
+                for (sval = va_arg(ap, char *); *sval; sval++)
+                    fprintf(stream, "%c", *sval);
                 break;
             case 'c':
                 ival = va_arg(ap, int);
-                snprintf(buf, sizeof(buf), "%c", ival);
-                printBufAppend(&pb, buf, strlen(buf));
+                fprintf(stream, "%c", ival);
                 break;
             default:
-                snprintf(buf, sizeof(buf), "%c", *p);
-                printBufAppend(&pb, buf, strlen(buf));
+                fprintf(stream, "%c", *p);
                 break;
         }
     }
     va_end(ap); // clean up when done
-
-    // TODO: print datetime before level
-    fprintf(stream, "%s: %s", level, pb.b);
-    free(pb.b);
 }
