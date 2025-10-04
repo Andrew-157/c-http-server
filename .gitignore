@@ -1,5 +1,4 @@
 test.c
 *.out
 *.o
-test/*
 venv/*

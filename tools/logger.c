@@ -5,6 +5,11 @@
 
 #include "logger.h"
 
+/*
+ * HUGE TODO here:
+ * apparently log_message doesn't work that well inside signal handler
+ * */
+
 // TODO: each level should also be in a variable
 char *LEVELS[4] = {
     INFO,
@@ -21,7 +26,10 @@ struct printBuf {
 static void printBufAppend(struct printBuf *pb, const char *s, int len) {
     char *new = realloc(pb->b, pb->len + len);
 
-    if (new == NULL) return;
+    if (new == NULL) {
+        printf("didn't allocate memory\n");
+        return;
+    };
     memcpy(&new[pb->len], s, len);
     pb->b = new;
     pb->len += len;
@@ -86,7 +94,7 @@ void log_message(char *level, char *msg, ...) {
     int ival;
     double dval;
     struct printBuf pb = {NULL, 0};
-    char buf[64];
+    char buf[32];
 
     va_start(ap, msg); // make ap point to 1st unnamed arg
     for (p = msg; *p; p++) {

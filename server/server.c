@@ -11,7 +11,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
-#include "logger.h"
+#include "../tools/logger.h"
 #include "request_handling.h"
 
 #define PORT        "8080" // port on which to listen for incoming connections
@@ -176,7 +176,7 @@ Options:\n\
 }
 
 void signal_handler(int sig) {
-    log_message(WARNING, "Caught signal: %d\n", sig);
+    printf("Caught signal: %d\n", sig);
     exit(0);
 }
 
