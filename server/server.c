@@ -31,12 +31,12 @@ int create_server_socket(char *);
 
 // add atexit maybe
 int main(int argc, char **argv) {
-    signal(SIGINT, signal_handler);
-    signal(SIGTERM, signal_handler);
 
     struct cli_data data = cli(argc, argv);
-
     setupLogger(data.verbose);
+
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
 
     int server_sockfd;
     server_sockfd = create_server_socket(PORT);
