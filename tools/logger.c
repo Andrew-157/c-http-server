@@ -10,7 +10,6 @@
  * apparently log_message doesn't work that well inside signal handler
  * */
 
-// TODO: each level should also be in a variable
 char *LEVELS[4] = {
     INFO,
     DEBUG,
@@ -23,21 +22,27 @@ struct printBuf {
     int len;
 };
 
+
 static void printBufAppend(struct printBuf *pb, const char *s, int len) {
     char *new = realloc(pb->b, pb->len + len);
 
-    if (new == NULL) {
-        printf("didn't allocate memory\n");
-        return;
-    };
+    if (new == NULL) return;
     memcpy(&new[pb->len], s, len);
     pb->b = new;
     pb->len += len;
 }
 
 /*
- * Set up logger - idk, i need to learn how to write docstrings
- * */
+setupLogger sets up environment variables needed for log_message function to operate:
+ - LOGGER_DEBUG_ENABLED - lets log_message know whether debug messages should be printed;
+ - LOGGER_SETUP_ENV     - lets log_message know whether setupLogger was called beforehand;
+
+Input:
+    int enable_debug: boolean that tells setupLogger whether debug messages in log_message should be printed;
+
+Output:
+    void
+*/
 void setupLogger(int enable_debug) {
     if (enable_debug)
         setenv(LOGGER_DEBUG_ENABLED, "1", 1);
@@ -47,8 +52,25 @@ void setupLogger(int enable_debug) {
 }
 
 /*
- * log a message
- * */
+log_message prints a message into a stream depending on the severity level.
+Severity levels are:
+ - INFO    - informational message(message will be sent to stdout);
+ - DEBUG   - debug message, which could be useful for debugging purposes, but may be redundant during normal operation of the server(if debug messages were enabled by setupLogger, message will be printed to stdout, else it won't be printed);
+ - WARNING - warning message, which doesn't indicate an error, but a message which attention should be paid to(message will be sent to stderr);
+ - ERROR   - error message(message will be sent to stderr)
+
+Input:
+    char *level - severity level, that is: INFO, DEBUG, WARNING, ERROR;
+    char *msg   - format string like in printf;
+    ...         - array of unnamed arguments like in printf;
+
+Output:
+    function doesn't return anything, but will exit the whole program with nonzero exit code, if:
+    - setupLogger function was not called beforehand;
+    - severity level other than INFO, DEBUG, WARNING or ERROR was provided;
+
+    otherwise, function will print a provided message based on the rules of the severity levels as described above.
+*/
 // TODO: extend accepted formatting options
 // TODO: handle sending messages to syslog
 // TODO: handle sending messages to remote syslog
