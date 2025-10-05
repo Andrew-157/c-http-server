@@ -83,24 +83,6 @@ int main(int argc, char **argv) {
         log_message(INFO, "Accepted client connection from IP(%s):PORT(%d)\n", printable_ip, ntohs(client_address.sin_port));
 
         accept_rqst(client_sockfd, data.buffer_size);
-
-        //log_message(INFO, "Sending an HTTP response to client with HTML body\n");
-
-        //char *html = read_template("./templates/index.html");
-        //if (html == NULL) {
-        //    log_message(ERROR, "Failed to open html template: %s\n", strerror(errno));
-        //    close(client_sockfd);
-        //    close(server_sockfd);
-        //    exit(errno);
-        //}
-
-        //char *http_response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 232\r\n\r\n";
-        //send(client_sockfd, http_response, strlen(http_response), 0);
-        //send(client_sockfd, html, strlen(html), 0);
-        //free(html);
-
-        //log_message(INFO, "Ending communication\n\n");
-        //close(client_sockfd);
     }
     close(server_sockfd);
     exit(0);
