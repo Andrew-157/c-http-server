@@ -112,7 +112,7 @@ As I understand, "Content-Coding" means that body itself is encoded, for example
 
 Client program that provides a way to test the server.
 
-More see [here](./testing/testcases.md).
+More see [here](./testing/testing_framework.md).
 
 ---
 
