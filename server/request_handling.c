@@ -88,6 +88,7 @@ void accept_rqst(int client_sockfd, int buffer_size) {
         }
 
         log_message(DEBUG, "Bytes received: %d\n", bytes_received);
+        log_message(DEBUG, "Received request message: %s\n", recv_msg);
 
         if (!rqst_line_recved) {
              while (i < bytes_received) {
