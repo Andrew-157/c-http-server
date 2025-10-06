@@ -15,6 +15,7 @@
 struct cli_data {
     char *host;
     char *port;
+    char *rqst_msg;
 };
 
 static struct cli_data cli(int, char **);
@@ -27,9 +28,7 @@ int main(int argc, char **argv) {
     int sockfd;
     sockfd = create_socket(data.host, data.port);
 
-    // TODO: allow configuring what method to send
-    char *send_msg = "GET / HTTP/1.1\r\n\r\n";
-    if (send(sockfd, send_msg, strlen(send_msg), 0) == -1) {
+    if (send(sockfd, data.rqst_msg, strlen(data.rqst_msg), 0) == -1) {
         close(sockfd);
         fprintf(stderr, "send: %s\n", strerror(errno));
         exit(errno);
@@ -47,12 +46,11 @@ int main(int argc, char **argv) {
     printf("Received msg from server:\n%s\n", recv_msg);
 
     close(sockfd);
-
 }
 
 static struct cli_data cli(int argc, char **argv) {
-    const char *help_text = "Usage: client [OPTIONS]\n\
-A simple TCP client program.\n\
+    const char *help_text = "Usage: client \"Request Message\" [OPTIONS]\n\
+A simple HTTP client program.\n\
 Options:\n\
   -n, --host <HOST>       Specify the host which to connect to - hostname or IPv4 IP address. If not provided \"%s\" will be used.\n\
   -p, --port <PORT>       Specify the port to which to connect to. If not provided \"%s\" will be used.\n\
@@ -60,6 +58,7 @@ Options:\n\
 ";
     char *host = NULL;
     char *port = NULL;
+    char *rqst_msg = NULL;
     char *option;
 
     for (int i = 1; i < argc; i++) {
@@ -99,7 +98,14 @@ Options:\n\
                 exit(0);
             }
             port = argv[++i];
+        } else {
+            rqst_msg = option;
         }
+    }
+
+    if (rqst_msg == NULL) {
+        printf("Request Message was not provided to the client program\n");
+        exit(1);
     }
 
     if (host == NULL) host = HOST;
@@ -108,6 +114,7 @@ Options:\n\
     struct cli_data data;
     data.host = host;
     data.port = port;
+    data.rqst_msg = rqst_msg;
 
     return data;
 }
