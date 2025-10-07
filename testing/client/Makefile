@@ -1,4 +1,4 @@
-client.out:
+client.out: client.c
 	$(CC) client.c -o client.out -Wall -pedantic
 
 clean:

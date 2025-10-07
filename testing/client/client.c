@@ -28,7 +28,9 @@ int main(int argc, char **argv) {
     int sockfd;
     sockfd = create_socket(data.host, data.port);
 
-    if (send(sockfd, data.rqst_msg, strlen(data.rqst_msg), 0) == -1) {
+    char *rqst_msg = "GET / HTTP/1.1\r\n\r\n";
+    //if (send(sockfd, data.rqst_msg, strlen(data.rqst_msg), 0) == -1) {
+    if (send(sockfd, rqst_msg, strlen(rqst_msg), 0) == -1) {
         close(sockfd);
         fprintf(stderr, "send: %s\n", strerror(errno));
         exit(errno);
