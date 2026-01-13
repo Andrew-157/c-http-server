@@ -1,4 +1,5 @@
 #include <netdb.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,7 +11,29 @@
 #define BACKLOG 10
 #define BUF_SIZE 500
 
+static volatile sig_atomic_t terminate = 0;
+
+// NOTE: this approach to signal handler doesn't currently work, because accept is blocking
+static void signal_handler(int sig) {
+	printf("Caught signal: %d\n", sig);
+	terminate = 1;
+}
+
 int main(int argc, char **argv) {
+	struct sigaction act = {
+		.sa_handler = signal_handler,
+		.sa_flags = SA_RESTART,
+	};
+	sigemptyset(&act.sa_mask);
+	int signals[2] = {SIGINT, SIGTERM};
+	for (int i = 0; i < sizeof(signals) / sizeof(int); i++) {
+		int sig = signals[i];
+		if (sigaction(sig, &act, NULL) == -1) {
+			perror("[server]: sigaction:");
+			exit(EXIT_FAILURE);
+		}
+	}
+
 	int server_fd, client_fd;
 	socklen_t peer_addrlen;
 	struct addrinfo hints, *result, *rp;
@@ -65,7 +88,7 @@ int main(int argc, char **argv) {
 		exit(EXIT_FAILURE);
 	}
 
-	while (1) {
+	while (!terminate) {
 		peer_addrlen = sizeof(peer_addr);
 		client_fd = accept(server_fd, (struct sockaddr *)&peer_addr, &peer_addrlen);	
 		if (client_fd == -1) {
@@ -99,6 +122,10 @@ int main(int argc, char **argv) {
 
 		char *response = "HTTP/1.1 404 Not Found\r\n\r\n";
 		send(client_fd, response, strlen(response), 0);
+		close(client_fd);
+	}
+
+	if (client_fd && client_fd != -1) {
 		close(client_fd);
 	}
 
