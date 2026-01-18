@@ -1,4 +1,6 @@
+#define _GNU_SOURCE
 #include <netdb.h>
+#include <poll.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,36 +11,33 @@
 
 #define PORT "8080"
 #define BACKLOG 10
-#define BUF_SIZE 500
 
 static volatile sig_atomic_t terminate = 0;
 
-// NOTE: this approach to signal handler doesn't currently work, because accept is blocking
 static void signal_handler(int sig) {
-	printf("Caught signal: %d\n", sig);
+	printf("[server]: Received signal: %d\n", sig);
 	terminate = 1;
 }
 
-int main(int argc, char **argv) {
+int main() {
 	struct sigaction act = {
 		.sa_handler = signal_handler,
 		.sa_flags = SA_RESTART,
 	};
 	sigemptyset(&act.sa_mask);
-	int signals[2] = {SIGINT, SIGTERM};
+	int signals[2] = {
+		SIGINT,
+		SIGTERM,
+	};
 	for (int i = 0; i < sizeof(signals) / sizeof(int); i++) {
 		int sig = signals[i];
 		if (sigaction(sig, &act, NULL) == -1) {
-			perror("[server]: sigaction:");
+			perror("[server]: sigaction");
 			exit(EXIT_FAILURE);
 		}
 	}
-
-	int server_fd, client_fd;
-	socklen_t peer_addrlen;
+	
 	struct addrinfo hints, *result, *rp;
-	struct sockaddr_storage peer_addr;
-
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
@@ -49,85 +48,127 @@ int main(int argc, char **argv) {
 	hints.ai_next = NULL;
 
 	int gai;
-	int yes = 1;
 	if ((gai = getaddrinfo(NULL, PORT, &hints, &result)) != 0) {
 		fprintf(stderr, "[server]: getaddrinfo: %s\n", gai_strerror(gai));
 		exit(EXIT_FAILURE);
 	}
 
-	for (rp = result; rp != NULL; rp = rp->ai_next) {
-		server_fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-		if (server_fd == -1) {
-			perror("[server]: socket:");
+	int listen_sock;
+	int yes = 1;
+	for (rp = result; rp != NULL; rp = rp -> ai_next) {
+		listen_sock = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+		if (listen_sock == -1) {
+			perror("[server]: socket");
 			continue;
 		}
 
-		if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
-			perror("[server]: setsockopt:");
-			exit(EXIT_FAILURE);			
+		if (setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
+			close(listen_sock);
+			perror("[server]: setsockopt");
+			continue;
 		}
 
-		if (bind(server_fd, rp->ai_addr, rp->ai_addrlen) == -1) {
-			close(server_fd);
-			perror("[server: bind:]");
+		if (bind(listen_sock, rp->ai_addr, rp->ai_addrlen) == -1) {
+			close(listen_sock);
+			perror("[server]: bind");
 			continue;
 		}
 
 		break;
 	}
-
+	
 	freeaddrinfo(result);
 
 	if (rp == NULL) {
-		fprintf(stderr, "[server]: Failed to bind\n");
+		fprintf(stderr, "[server]: failed to bind\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if (listen(server_fd, BACKLOG) == -1) {
-		perror("[server]: listen:");
+	if (listen(listen_sock, BACKLOG) == -1) {
+		perror("[server]: listen");
 		exit(EXIT_FAILURE);
 	}
+
+	int fd_size = 5;
+	int fd_count = 0;
+	struct pollfd *pfds = malloc(sizeof *pfds * fd_size);
+
+	pfds[0].fd = listen_sock;
+	pfds[0].events = POLLIN;
+
+	fd_count = 1;
+	int exit_code = EXIT_SUCCESS;
 
 	while (!terminate) {
-		peer_addrlen = sizeof(peer_addr);
-		client_fd = accept(server_fd, (struct sockaddr *)&peer_addr, &peer_addrlen);	
-		if (client_fd == -1) {
-			perror("[server]: accept:");
-			continue;
-		}
+		sigset_t sigmask;
+		sigemptyset(&sigmask);
+		int poll_count = ppoll(pfds, fd_count, NULL, &sigmask);
 
-		int gnf;
-		char host[NI_MAXHOST], service[NI_MAXSERV];
-		if ((gnf = getnameinfo((struct sockaddr *)&peer_addr,
-								peer_addrlen, host, NI_MAXHOST,
-								service, NI_MAXSERV, NI_NUMERICSERV)) == 0) {
-			printf("Accepted connection from %s:%s\n", host, service);
+		if (poll_count == -1) {
+			perror("[server]: ppoll");
+			exit_code = EXIT_FAILURE;
+			break;
 		} else {
-			fprintf(stderr, "[server]: getnameinfo: %s\n", gai_strerror(gnf));
-		}
+			for (int i = 0; i < fd_count; i++) {
+				if (pfds[i].revents & POLLIN) {
+					if (pfds[i].fd == listen_sock) {
+						struct sockaddr_storage peer_addr;
+						socklen_t peer_addrlen = sizeof peer_addr;
+						int client_sock;
+						if ((client_sock = accept(listen_sock, (struct sockaddr *)&peer_addr, &peer_addrlen)) == -1) {
+							perror("[server]: accept");
+							continue;
+						} else {
+							printf("[server]: Accepting new connection\n");
+							int gnf;
+							char host[NI_MAXHOST], service[NI_MAXSERV];
+							if ((gnf = getnameinfo((struct sockaddr *)&peer_addr,
+													peer_addrlen, host, NI_MAXHOST,
+													service, NI_MAXSERV, NI_NUMERICSERV)) == 0) {
+								printf("[server]: Accepted connection from %s:%s\n", host, service);
+							} else {
+								fprintf(stderr, "[server]: getnameinfo: %s\n", gai_strerror(gnf));
+							}
+							if (fd_count == fd_size) {
+								printf("[server]: Number of client has overflown  - increasing\n");
+								fd_size++;
+								pfds = realloc(pfds, sizeof(pfds) * fd_size);
+							}
+							pfds[fd_count].fd = client_sock;
+							pfds[fd_count].events = POLLIN;
+							fd_count++;
+						}
+					} else {
+						printf("[server]: Reading client data\n");
+						char buf[1000];
+						int client_sock = pfds[i].fd;
+						int nread;
+						if ((nread = recv(client_sock, buf, sizeof(buf), 0)) > 0) {
+							printf("[server]: Received %d bytes from client:\n%.*s\n", nread, nread, buf);	
+							char *response = "HTTP/1.1 200 OK\r\n\r\n";
+							printf("[server]: Sending response\n");
+							send(client_sock, response, strlen(response), 0);
+							printf("[server]: Response sent successfully\n");
+						} else if (nread == 0) {
+							fprintf(stderr, "[server]: Client closed the connection\n");
+						} else {
+							perror("[server]: recv");
+						}
 
-		char buf[BUF_SIZE];
-		ssize_t nread;
-		if ((nread = recv(client_fd, buf, BUF_SIZE, 0)) > 0) {
-			printf("Received %zd bytes from client:\n%s\n", nread, buf);
-		} else if (nread == 0) {
-			printf("Client closed the connection - ending communication\n");
-			close(client_fd);
-			continue;
-		} else if (nread == -1) {
-			perror("[server]: recv:");
-			close(client_fd);
-			continue;
+						close(client_sock);
+						pfds[i--] = pfds[fd_count--];
+					}
+				}	
+			}
 		}
-
-		char *response = "HTTP/1.1 404 Not Found\r\n\r\n";
-		send(client_fd, response, strlen(response), 0);
-		close(client_fd);
 	}
 
-	if (client_fd && client_fd != -1) {
-		close(client_fd);
+	printf("[server]: Closing all connections and listening socket\n");
+	for (int i = 0; i < fd_count; i++) {
+		close(pfds[i].fd);
 	}
 
-	close(server_fd);
+	free(pfds);
+
+	exit(exit_code);
 }
