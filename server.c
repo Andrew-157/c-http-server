@@ -11,6 +11,7 @@
 
 #define PORT "8080"
 #define BACKLOG 10
+#define BUF_SIZE 1000
 
 static volatile sig_atomic_t terminate = 0;
 
@@ -18,6 +19,8 @@ static void signal_handler(int sig) {
 	printf("[server]: Received signal: %d\n", sig);
 	terminate = 1;
 }
+
+void handle_client_data(int, int);
 
 int main() {
 	struct sigaction act = {
@@ -139,22 +142,8 @@ int main() {
 							fd_count++;
 						}
 					} else {
-						printf("[server]: Reading client data\n");
-						char buf[1000];
 						int client_sock = pfds[i].fd;
-						int nread;
-						if ((nread = recv(client_sock, buf, sizeof(buf), 0)) > 0) {
-							printf("[server]: Received %d bytes from client:\n%.*s\n", nread, nread, buf);	
-							char *response = "HTTP/1.1 200 OK\r\n\r\n";
-							printf("[server]: Sending response\n");
-							send(client_sock, response, strlen(response), 0);
-							printf("[server]: Response sent successfully\n");
-						} else if (nread == 0) {
-							fprintf(stderr, "[server]: Client closed the connection\n");
-						} else {
-							perror("[server]: recv");
-						}
-
+						handle_client_data(client_sock, BUF_SIZE);
 						close(client_sock);
 						pfds[i--] = pfds[fd_count--];
 					}
@@ -171,4 +160,22 @@ int main() {
 	free(pfds);
 
 	exit(exit_code);
+}
+
+void handle_client_data(int client_sock, int buf_size) {
+	printf("[server]: Accepting client request\n");
+	int nread;
+	char buf[buf_size];
+	if ((nread = recv(client_sock, buf, sizeof(buf), 0)) > 0) {
+		buf[nread] = '\0';
+		printf("[server]: Received %d bytes from client:\n%s\n", nread, buf);
+		char *response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 22\r\n\r\n<h1>C HTTP Server</h1>";
+		printf("[server]: Sending response\n");
+		send(client_sock, response, strlen(response), 0);
+		printf("[server]: Response sent successfully\n");  // doubt
+	} else if (nread == 0) {
+		fprintf(stderr, "[server]: Client closed the connection\n");
+	} else {
+		perror("[server]: recv");
+	}
 }
