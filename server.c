@@ -168,7 +168,32 @@ void handle_client_data(int client_sock, int buf_size) {
 	char buf[buf_size];
 	if ((nread = recv(client_sock, buf, sizeof(buf), 0)) > 0) {
 		buf[nread] = '\0';
+	
+		char c;
+		char *request_line = NULL;
+		//char *headers = NULL;
+		for (int i = 0; i < nread; i++) {
+			c = buf[i];
+			if (c == '\r') {
+				if (i < nread && buf[i+1] != '\n') {
+					fprintf(stderr, "[server]: Carriage return not followed by newline character\n");
+				} else {
+					if (!request_line) {
+						printf("Extracting request line\n");
+						request_line = malloc(sizeof(char) * (i - 2 + 1));
+						for (int j = 0; j < i; j++)	{
+							request_line[j] = buf[j];
+						}
+					}	
+				}
+			}
+		}
+
 		printf("[server]: Received %d bytes from client:\n%s\n", nread, buf);
+		if (request_line) {
+			printf("Request line: %.*s\n", (int)strlen(request_line), request_line);
+			free(request_line);
+		}
 		char *response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 22\r\n\r\n<h1>C HTTP Server</h1>";
 		printf("[server]: Sending response\n");
 		send(client_sock, response, strlen(response), 0);
