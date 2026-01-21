@@ -39,7 +39,7 @@ int main() {
 			exit(EXIT_FAILURE);
 		}
 	}
-	
+
 	struct addrinfo hints, *result, *rp;
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
@@ -79,7 +79,7 @@ int main() {
 
 		break;
 	}
-	
+
 	freeaddrinfo(result);
 
 	if (rp == NULL) {
@@ -135,7 +135,7 @@ int main() {
 							if (fd_count == fd_size) {
 								printf("[server]: Number of client has overflown  - increasing\n");
 								fd_size++;
-								pfds = realloc(pfds, sizeof(pfds) * fd_size);
+								pfds = realloc(pfds, sizeof *pfds * fd_size);
 							}
 							pfds[fd_count].fd = client_sock;
 							pfds[fd_count].events = POLLIN;
@@ -147,7 +147,7 @@ int main() {
 						close(client_sock);
 						pfds[i--] = pfds[fd_count--];
 					}
-				}	
+				}
 			}
 		}
 	}
@@ -168,7 +168,7 @@ void handle_client_data(int client_sock, int buf_size) {
 	char buf[buf_size];
 	if ((nread = recv(client_sock, buf, sizeof(buf), 0)) > 0) {
 		buf[nread] = '\0';
-	
+
 		char c;
 		char *request_line = NULL;
 		//char *headers = NULL;
@@ -184,7 +184,7 @@ void handle_client_data(int client_sock, int buf_size) {
 						for (int j = 0; j < i; j++)	{
 							request_line[j] = buf[j];
 						}
-					}	
+					}
 				}
 			}
 		}
