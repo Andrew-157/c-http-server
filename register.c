@@ -3,39 +3,67 @@
 #include <string.h>
 
 typedef struct {
-	char *url;
-	char *callback;
+    char *url;
+    void (*callback)(void);
 } handler;
 
-handler *handlers;
-int size = 0;
+static handler *handlers;
+static int size = 0;
 
-void register_handler(char *, char *);
+void register_handler(char *url, void (*callback)(void)) {
+    handlers = realloc(handlers, sizeof(handler) * (size + 1));
 
-int main() {
-	register_handler("/homepage", "Homepage handler");
+    handler h = {
+        .url = malloc(sizeof(url)),
+        .callback = callback,
+    };
 
-	for (int i = 0; i < size; i++) {
-		printf("Url %s will be handled by %s\n", handlers[i].url, handlers[i].callback);
-	}
-
-	for (int i = 0; i < size; i++) {
-		free(handlers[i].url);
-		free(handlers[i].callback);
-	}
-	free(handlers);
+    strcpy(h.url, url);
+    handlers[size] = h;
+    size += 1;
 }
 
-void register_handler(char *url, char *callback) {
-	handlers = realloc(handlers, sizeof(handler) * (size + 1));
+void mainpage(void) {
+    printf("Handling mainpage request\n");
+}
 
-	handler h = {
-		.url = malloc(sizeof(url)),
-		.callback = malloc(sizeof(callback)),
-	};
-	strcpy(h.url, url);
-	strcpy(h.callback, callback);
+void users(void) {
+    printf("Users page request\n");
+}
 
-	handlers[size] = h;
-	size += 1;
+void _404_handler(void) {
+    printf("This page doesn't exist\n");
+}
+
+typedef void (*callback_type)(void);
+callback_type handle_request(char *url) {
+    for (int i = 0; i < size; i++) {
+        if (strcmp(url, handlers[i].url) == 0) {
+            return handlers[i].callback;
+        }
+    }
+    return _404_handler;
+}
+
+void freehandlers() {
+    for (int i = 0; i < size; i++) {
+        free(handlers[i].url);
+    }
+    free(handlers);
+}
+
+int main() {
+    register_handler("/homepage", mainpage);
+    register_handler("/users", users);
+
+    char *urls[] = {
+        "/homepage",
+        "/random",
+        "/users",
+    };
+    for (int i = 0; i < 3; i++) {
+        handle_request(urls[i])();
+    }
+
+    freehandlers();
 }
