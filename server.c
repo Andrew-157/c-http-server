@@ -33,7 +33,6 @@ int main(void) {
         }
     }
 
-
     struct addrinfo hints, *result, *p;
 
     memset(&hints, 0, sizeof hints);
@@ -82,10 +81,12 @@ int main(void) {
         exit(EXIT_FAILURE);
     }
 
+    printf("[server]: accepting connections\n");
+
     while (!terminate) {
         char host[NI_MAXHOST], service[NI_MAXSERV];
-        socklen_t peer_addrlen;
         struct sockaddr_storage peer_addr;
+        socklen_t peer_addrlen = sizeof peer_addr;
         int client_sock;
         if ((client_sock = accept(server_sock, (struct sockaddr *)&peer_addr, &peer_addrlen)) == -1) {
             perror("[server]: accept");
