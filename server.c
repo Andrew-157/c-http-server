@@ -14,15 +14,10 @@
 #define BUF_SIZE 1000
 
 static volatile sig_atomic_t terminate = 0;
+static void signal_handler(int);
+void handle_client_data(int);
 
-static void signal_handler(int sig) {
-    printf("[server]: Received signal: %d\n", sig);
-    terminate = 1;
-}
-
-void handle_client_data(int, int);
-
-int main() {
+int main(void) {
     struct sigaction act = {
         .sa_handler = signal_handler,
         .sa_flags = SA_RESTART,
@@ -32,7 +27,7 @@ int main() {
         SIGINT,
         SIGTERM,
     };
-    for (int i = 0; i < sizeof(signals) / sizeof(int); i++) {
+    for (int i = 0; i < 2; i++) {
         int sig = signals[i];
         if (sigaction(sig, &act, NULL) == -1) {
             perror("[server]: sigaction");
@@ -40,15 +35,11 @@ int main() {
         }
     }
 
-    struct addrinfo hints, *result, *rp;
-    memset(&hints, 0, sizeof(hints));
+    struct addrinfo hints, *result, *p;
+    memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
-    hints.ai_protocol = 0;
-    hints.ai_canonname = NULL;
-    hints.ai_addr = NULL;
-    hints.ai_next = NULL;
 
     int gai;
     if ((gai = getaddrinfo(NULL, PORT, &hints, &result)) != 0) {
@@ -56,23 +47,22 @@ int main() {
         exit(EXIT_FAILURE);
     }
 
-    int listen_sock;
+    int listener;
     int yes = 1;
-    for (rp = result; rp != NULL; rp = rp -> ai_next) {
-        listen_sock = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
-        if (listen_sock == -1) {
+    for (p = result; p != NULL; p = p->ai_next) {
+        if ((listener = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
             perror("[server]: socket");
             continue;
         }
 
-        if (setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
-            close(listen_sock);
+        if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
+            close(listener);
             perror("[server]: setsockopt");
             continue;
         }
 
-        if (bind(listen_sock, rp->ai_addr, rp->ai_addrlen) == -1) {
-            close(listen_sock);
+        if (bind(listener, p->ai_addr, p->ai_addrlen) == -1) {
+            close(listener);
             perror("[server]: bind");
             continue;
         }
@@ -82,24 +72,24 @@ int main() {
 
     freeaddrinfo(result);
 
-    if (rp == NULL) {
+    if (p == NULL) {
         fprintf(stderr, "[server]: failed to bind\n");
         exit(EXIT_FAILURE);
     }
 
-    if (listen(listen_sock, BACKLOG) == -1) {
+    if (listen(listener, BACKLOG) == -1) {
         perror("[server]: listen");
         exit(EXIT_FAILURE);
     }
 
-    int fd_size = 5;
-    int fd_count = 0;
-    struct pollfd *pfds = malloc(sizeof *pfds * fd_size);
+    printf("[server]: accepting connections...\n");
 
-    pfds[0].fd = listen_sock;
+    int fd_size = 5;
+    int fd_count = 1;  // 1 because listening socket
+    struct pollfd *pfds = malloc(sizeof *pfds * fd_size);
+    pfds[0].fd = listener;
     pfds[0].events = POLLIN;
 
-    fd_count = 1;
     int exit_code = EXIT_SUCCESS;
 
     while (!terminate) {
@@ -111,45 +101,60 @@ int main() {
             perror("[server]: ppoll");
             exit_code = EXIT_FAILURE;
             break;
-        } else {
-            for (int i = 0; i < fd_count; i++) {
-                if (pfds[i].revents & POLLIN) {
-                    if (pfds[i].fd == listen_sock) {
-                        struct sockaddr_storage peer_addr;
-                        socklen_t peer_addrlen = sizeof peer_addr;
-                        int client_sock;
-                        if ((client_sock = accept(listen_sock, (struct sockaddr *)&peer_addr, &peer_addrlen)) == -1) {
-                            perror("[server]: accept");
-                            continue;
-                        } else {
-                            printf("[server]: Accepting new connection\n");
-                            int gnf;
-                            char host[NI_MAXHOST], service[NI_MAXSERV];
-                            if ((gnf = getnameinfo((struct sockaddr *)&peer_addr,
-                                                    peer_addrlen, host, NI_MAXHOST,
-                                                    service, NI_MAXSERV, NI_NUMERICSERV)) == 0) {
-                                printf("[server]: Accepted connection from %s:%s\n", host, service);
-                            } else {
-                                fprintf(stderr, "[server]: getnameinfo: %s\n", gai_strerror(gnf));
-                            }
-                            if (fd_count == fd_size) {
-                                printf("[server]: Number of client has overflown  - increasing\n");
-                                fd_size++;
-                                pfds = realloc(pfds, sizeof *pfds * fd_size);
-                            }
-                            pfds[fd_count].fd = client_sock;
-                            pfds[fd_count].events = POLLIN;
-                            fd_count++;
-                        }
-                    } else {
-                        int client_sock = pfds[i].fd;
-                        handle_client_data(client_sock, BUF_SIZE);
-                        close(client_sock);
-                        pfds[i--] = pfds[fd_count--];
+        }
+
+        for (int i = 0; i < fd_count; i++) {
+            if (pfds[i].revents & POLLIN) {
+                if (pfds[i].fd == listener) {
+                    struct sockaddr_storage peer_addr;
+                    socklen_t peer_addrlen = sizeof peer_addr;
+                    int client;
+                    if ((client = accept(listener, (struct sockaddr *)&peer_addr, &peer_addrlen)) == -1) {
+                        perror("[server]: accept");
+                        continue;
                     }
+
+                    printf("[server]: Accepting new connection\n");
+                    char host[NI_MAXHOST], service[NI_MAXSERV];
+                    int gnf;
+                    if ((gnf = getnameinfo((struct sockaddr *)&peer_addr,
+                                          peer_addrlen, host, NI_MAXHOST,
+                                          service, NI_MAXSERV, NI_NUMERICSERV)) == -1) {
+                        // I actually don't know if we shouldn't just ignore the failure
+                        close(client);
+                        fprintf(stderr, "[server]: getnameinfo: %s\n", gai_strerror(gnf));
+                        continue;
+                    }
+
+                    printf("[server]: Accepted connection from %s:%s\n", host, service);
+
+                    if (fd_count == fd_size) {
+                        printf("[server]: Number of clients has overflown - increasing\n");
+                        fd_size++;
+                        pfds = realloc(pfds, sizeof *pfds * fd_size);
+                    }
+                    pfds[fd_count].fd = client;
+                    pfds[fd_count].events = POLLIN;
+                    fd_count++;
+                } else {
+                    int client = pfds[i].fd;
+                    int pid;
+                    if (!(pid = fork())) {
+                        close(listener);
+                        handle_client_data(client);
+                        close(client);
+                        exit(0);
+                    } else if (pid < 0) {
+                        perror("[server]: fork");
+                    } else {
+                        printf("[server]: forked child process %d to handle client data\n", pid);
+                    }
+                    close(client);
+                    pfds[i--] = pfds[--fd_count];
                 }
             }
         }
+
     }
 
     printf("[server]: Closing all connections and listening socket\n");
@@ -162,11 +167,17 @@ int main() {
     exit(exit_code);
 }
 
-void handle_client_data(int client_sock, int buf_size) {
+static void signal_handler(int sig) {
+    // reap child processes
+    printf("[server]: Received signal %d", sig);
+    terminate = 1;
+}
+
+void handle_client_data(int send_sock) {
     printf("[server]: Accepting client request\n");
     int nread;
-    char buf[buf_size];
-    if ((nread = recv(client_sock, buf, sizeof(buf), 0)) > 0) {
+    char buf[BUF_SIZE];
+    if ((nread = recv(send_sock, buf, sizeof(buf), 0)) > 0) {
         buf[nread] = '\0';
 
         char c;
@@ -196,7 +207,7 @@ void handle_client_data(int client_sock, int buf_size) {
         }
         char *response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 22\r\n\r\n<h1>C HTTP Server</h1>";
         printf("[server]: Sending response\n");
-        send(client_sock, response, strlen(response), 0);
+        send(send_sock, response, strlen(response), 0);
         printf("[server]: Response sent successfully\n");  // doubt
     } else if (nread == 0) {
         fprintf(stderr, "[server]: Client closed the connection\n");
