@@ -7,6 +7,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 #define PORT "8080"
@@ -23,11 +24,12 @@ int main(void) {
         .sa_flags = SA_RESTART,
     };
     sigemptyset(&act.sa_mask);
-    int signals[2] = {
+    int signals[3] = {
         SIGINT,
         SIGTERM,
+        SIGCHLD,
     };
-    for (int i = 0; i < 2; i++) {
+    for (int i = 0; i < 3; i++) {
         int sig = signals[i];
         if (sigaction(sig, &act, NULL) == -1) {
             perror("[server]: sigaction");
@@ -95,6 +97,7 @@ int main(void) {
     while (!terminate) {
         sigset_t sigmask;
         sigemptyset(&sigmask);
+        sigaddset(&sigmask, SIGCHLD);
         int poll_count = ppoll(pfds, fd_count, NULL, &sigmask);
 
         if (poll_count == -1) {
@@ -168,9 +171,13 @@ int main(void) {
 }
 
 static void signal_handler(int sig) {
-    // reap child processes
-    printf("[server]: Received signal %d", sig);
-    terminate = 1;
+    printf("[server]: Received signal %d\n", sig);
+    if (sig == SIGCHLD) {
+        // reap child processes
+        while (waitpid(-1, NULL, WNOHANG) > 0);
+    } else {
+        terminate = 1;
+    }
 }
 
 void handle_client_data(int send_sock) {
