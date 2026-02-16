@@ -10,15 +10,71 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#define PORT "8080"
+#include "server.h"
+
 #define BACKLOG 10
 #define BUF_SIZE 1000
 
 static volatile sig_atomic_t terminate = 0;
 static void signal_handler(int);
-void handle_client_data(int);
+static void handle_client_data(int);
 
-int main(void) {
+int serve(const char *port) {
+    struct addrinfo hints, *result, *p;
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+
+    int gai;
+    if ((gai = getaddrinfo(NULL, port, &hints, &result)) != 0) {
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(gai));
+        return 1;
+    }
+
+    int listener;
+    int yes = 1;
+    for (p = result; p != NULL; p = p->ai_next) {
+        if ((listener = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+            perror("socket");
+            continue;
+        }
+
+        if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
+            close(listener);
+            perror("setsockopt");
+            continue;
+        }
+
+        if (bind(listener, p->ai_addr, p->ai_addrlen) == -1) {
+            close(listener);
+            perror("bind");
+            continue;
+        }
+
+        break;
+    }
+
+    freeaddrinfo(result);
+
+    if (p == NULL) {
+        fprintf(stderr, "failed to bind\n");
+        return 1;
+    }
+
+    if (listen(listener, BACKLOG) == -1) {
+        perror("listen");
+        return 1;
+    }
+
+    printf("Accepting connections...\n");
+
+    int fd_size = 5;
+    int fd_count = 1;  // 1 for listener from the start
+    struct pollfd *pfds = malloc(sizeof *pfds * fd_size);
+    pfds[0].fd = listener;
+    pfds[0].events = POLLIN;
+
     struct sigaction act = {
         .sa_handler = signal_handler,
         .sa_flags = SA_RESTART,
@@ -32,68 +88,13 @@ int main(void) {
     for (int i = 0; i < 3; i++) {
         int sig = signals[i];
         if (sigaction(sig, &act, NULL) == -1) {
-            perror("[server]: sigaction");
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    struct addrinfo hints, *result, *p;
-    memset(&hints, 0, sizeof hints);
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
-
-    int gai;
-    if ((gai = getaddrinfo(NULL, PORT, &hints, &result)) != 0) {
-        fprintf(stderr, "[server]: getaddrinfo: %s\n", gai_strerror(gai));
-        exit(EXIT_FAILURE);
-    }
-
-    int listener;
-    int yes = 1;
-    for (p = result; p != NULL; p = p->ai_next) {
-        if ((listener = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
-            perror("[server]: socket");
-            continue;
-        }
-
-        if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {
             close(listener);
-            perror("[server]: setsockopt");
-            continue;
+            perror("sigaction");
+            return 1;
         }
-
-        if (bind(listener, p->ai_addr, p->ai_addrlen) == -1) {
-            close(listener);
-            perror("[server]: bind");
-            continue;
-        }
-
-        break;
     }
 
-    freeaddrinfo(result);
-
-    if (p == NULL) {
-        fprintf(stderr, "[server]: failed to bind\n");
-        exit(EXIT_FAILURE);
-    }
-
-    if (listen(listener, BACKLOG) == -1) {
-        perror("[server]: listen");
-        exit(EXIT_FAILURE);
-    }
-
-    printf("[server]: accepting connections...\n");
-
-    int fd_size = 5;
-    int fd_count = 1;  // 1 because listening socket
-    struct pollfd *pfds = malloc(sizeof *pfds * fd_size);
-    pfds[0].fd = listener;
-    pfds[0].events = POLLIN;
-
-    int exit_code = EXIT_SUCCESS;
-
+    int return_code = 0;
     while (!terminate) {
         sigset_t sigmask;
         sigemptyset(&sigmask);
@@ -101,8 +102,8 @@ int main(void) {
         int poll_count = ppoll(pfds, fd_count, NULL, &sigmask);
 
         if (poll_count == -1) {
-            perror("[server]: ppoll");
-            exit_code = EXIT_FAILURE;
+            perror("ppoll");
+            return_code = 1;
             break;
         }
 
@@ -113,26 +114,26 @@ int main(void) {
                     socklen_t peer_addrlen = sizeof peer_addr;
                     int client;
                     if ((client = accept(listener, (struct sockaddr *)&peer_addr, &peer_addrlen)) == -1) {
-                        perror("[server]: accept");
+                        perror("accept");
                         continue;
                     }
 
-                    printf("[server]: Accepting new connection\n");
+                    printf("Accepting new client connection\n");
                     char host[NI_MAXHOST], service[NI_MAXSERV];
                     int gnf;
                     if ((gnf = getnameinfo((struct sockaddr *)&peer_addr,
-                                          peer_addrlen, host, NI_MAXHOST,
-                                          service, NI_MAXSERV, NI_NUMERICSERV)) == -1) {
-                        // I actually don't know if we shouldn't just ignore the failure
+                                            peer_addrlen, host, NI_MAXHOST,
+                                            service, NI_MAXSERV, NI_NUMERICSERV)) == -1) {
+                        // maybe we should just ignore the failure
                         close(client);
                         fprintf(stderr, "[server]: getnameinfo: %s\n", gai_strerror(gnf));
                         continue;
                     }
 
-                    printf("[server]: Accepted connection from %s:%s\n", host, service);
+                    printf("Accepted connection from %s:%s\n", host, service);
 
                     if (fd_count == fd_size) {
-                        printf("[server]: Number of clients has overflown - increasing\n");
+                        printf("Number of observed file descriptors has overflown - increasing\n");
                         fd_size++;
                         pfds = realloc(pfds, sizeof *pfds * fd_size);
                     }
@@ -148,30 +149,29 @@ int main(void) {
                         close(client);
                         exit(0);
                     } else if (pid < 0) {
-                        perror("[server]: fork");
+                        perror("fork");
                     } else {
-                        printf("[server]: forked child process %d to handle client data\n", pid);
+                        printf("Forked child process %d to handle client data\n", pid);
                     }
                     close(client);
                     pfds[i--] = pfds[--fd_count];
                 }
             }
         }
-
     }
 
-    printf("[server]: Closing all connections and listening socket\n");
+    printf("Shutting down the server...\n");
     for (int i = 0; i < fd_count; i++) {
         close(pfds[i].fd);
     }
 
     free(pfds);
 
-    exit(exit_code);
+    return return_code;
 }
 
 static void signal_handler(int sig) {
-    printf("[server]: Received signal %d\n", sig);
+    printf("Received signal %d\n", sig);  // Doesn't it spam since child processes constantly exit?
     if (sig == SIGCHLD) {
         // reap child processes
         while (waitpid(-1, NULL, WNOHANG) > 0);
@@ -180,7 +180,7 @@ static void signal_handler(int sig) {
     }
 }
 
-void handle_client_data(int send_sock) {
+static void handle_client_data(int send_sock) {
     printf("[server]: Accepting client request\n");
     int nread;
     char buf[BUF_SIZE];
