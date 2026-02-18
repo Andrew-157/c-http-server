@@ -3,4 +3,14 @@
 
 int serve(const char *);
 
+struct request {
+    char *method;
+};
+
+struct response {
+    int status_code;
+    char *content_type;
+    char *body;
+};
+
 #endif
