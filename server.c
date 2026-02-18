@@ -97,7 +97,49 @@ static struct response not_found_callback(struct request req) {
     struct response resp;
     resp.status_code = 404;
     resp.content_type = "text/html";
-    resp.body = "<h1>Page Not Found</h1>";
+    resp.body =
+        "<!DOCTYPE html>\n"
+        "<html lang=\"en\">\n"
+        "<head>\n"
+        "    <meta charset=\"UTF-8\">\n"
+        "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+        "    <title>404 | Not Found</title>\n"
+        "    <style>\n"
+        "        :root { --bg: #0d1117; --card: #161b22; --text: #c9d1d9; --error: #f85149; --border: #30363d; --accent: #238636; }\n"
+        "        body { font-family: -apple-system, system-ui, sans-serif; background-color: var(--bg); color: var(--text); \n"
+        "               display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }\n"
+        "        .container { background-color: var(--card); padding: 2.5rem; border-radius: 8px; \n"
+        "                    border: 1px solid var(--border); text-align: center; max-width: 450px; }\n"
+        "        .error-badge { display: inline-block; background: rgba(248, 81, 73, 0.1); color: var(--error); \n"
+        "                        padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; \n"
+        "                        margin-bottom: 1rem; border: 1px solid var(--error); }\n"
+        "        h1 { margin: 0 0 1rem 0; font-size: 3rem; font-family: monospace; }\n"
+        "        p { color: #8b949e; margin-bottom: 2rem; line-height: 1.5; }\n"
+        "        .info-box { background: var(--bg); padding: 15px; border-radius: 4px; border: 1px solid var(--border); \n"
+        "                    text-align: left; font-family: monospace; font-size: 0.9rem; margin-bottom: 2rem; }\n"
+        "        .path { color: var(--error); }\n"
+        "        .btn { background-color: #21262d; color: var(--text); text-decoration: none; border: 1px solid var(--border); \n"
+        "               padding: 10px 20px; border-radius: 6px; font-weight: 600; transition: 0.2s; }\n"
+        "        .btn:hover { background-color: #30363d; border-color: #8b949e; }\n"
+        "    </style>\n"
+        "</head>\n"
+        "<body>\n"
+        "    <div class=\"container\">\n"
+        "        <div class=\"error-badge\">● 404 ERROR</div>\n"
+        "        <h1>FILE_NOT_FOUND</h1>\n"
+        "        <p>The requested resource does not exist on this C server.</p>\n"
+        "        <div class=\"info-box\">\n"
+        "            <div>$ status: <span class=\"path\">404</span></div>\n"
+        "            <div>$ request_uri: <span id=\"req-path\" class=\"path\">--</span></div>\n"
+        "        </div>\n"
+        "        <a href=\"/\" class=\"btn\">Return to Dashboard</a>\n"
+        "    </div>\n"
+        "    <script>\n"
+        "        // Grab the current path to show the user what failed\n"
+        "        document.getElementById('req-path').innerText = window.location.pathname;\n"
+        "    </script>\n"
+        "</body>\n"
+        "</html>";
     return resp;
 }
 
@@ -151,6 +193,8 @@ static void serve_client(int send_sock) {
             resp = global.index_callback(req);
         } else if (strcmp(uri, "/favicon.ico") == 0) {
             resp = global.favicon_callback(req);
+        } else {
+            resp = global.not_found_callback(req);
         }
 
         char response[3000];
