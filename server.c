@@ -19,6 +19,7 @@ static struct response index_callback(struct request req) {
     (void)req;  // silence compiler warning for now
     struct response resp;
     resp.content_type = "text/html";
+    resp.status_code = 200;
     char *html =
         "<!DOCTYPE html>\n"
         "<html lang=\"en\">\n"
@@ -74,13 +75,42 @@ static struct response index_callback(struct request req) {
     return resp;
 }
 
+static struct response favicon_callback(struct request req) {
+    (void)req;  // silence compiler warning for now
+    struct response resp;
+    resp.status_code = 200;
+    resp.content_type = "image/svg+xml";
+    resp.body = 
+        "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\">"
+        "<rect width=\"64\" height=\"64\" fill=\"#0d1117\" rx=\"8\"/>"
+        "<g fill=\"#238636\">"
+        "<path d=\"M20 12h28v8H20zm-8 8h8v24h-8zm8 24h28v8H20z\"/>"
+        "<rect x=\"48\" y=\"22\" width=\"6\" height=\"6\"/>"
+        "<rect x=\"48\" y=\"36\" width=\"6\" height=\"6\"/>"
+        "<rect x=\"32\" y=\"30\" width=\"14\" height=\"4\"/>"
+        "<circle cx=\"46\" cy=\"32\" r=\"5\"/></g></svg>";
+    return resp;
+}
+
+static struct response not_found_callback(struct request req) {
+    (void)req;
+    struct response resp;
+    resp.status_code = 404;
+    resp.content_type = "text/html";
+    resp.body = "<h1>Page Not Found</h1>";
+    return resp;
+}
+
 
 typedef struct response (*uri_callback)(struct request);
 static struct {
     uri_callback index_callback;
-    //uri_callback not_found_callback;
+    uri_callback favicon_callback;
+    uri_callback not_found_callback;
 } global = {
     .index_callback = index_callback,
+    .favicon_callback = favicon_callback,
+    .not_found_callback = not_found_callback,
 };
 
 static void serve_client(int send_sock) {
@@ -116,7 +146,12 @@ static void serve_client(int send_sock) {
 
         req.method = method;
 
-        struct response resp = global.index_callback(req);
+        struct response resp;
+        if (strcmp(uri, "/") == 0) {
+            resp = global.index_callback(req);
+        } else if (strcmp(uri, "/favicon.ico") == 0) {
+            resp = global.favicon_callback(req);
+        }
 
         char response[3000];
         snprintf(response, 3000,
@@ -125,7 +160,7 @@ static void serve_client(int send_sock) {
 
         //char *response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 22\r\n\r\n<h1>C HTTP Server</h1>";
         //printf("[server]: Sending response\n");
-        send(send_sock, response, strlen(response), 0);
+        send(send_sock, response, sizeof(response), 0);
     } else if (nread == 0) {
         fprintf(stderr, "Client closed the connection\n");
     } else {
