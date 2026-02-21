@@ -14,4 +14,8 @@ struct response {
     char *headers;
 };
 
+typedef struct response (*uri_callback)(struct request);
+void register_uri_callback(char *, uri_callback);
+void freecallbacks();
+
 #endif

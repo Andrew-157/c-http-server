@@ -148,7 +148,7 @@ static struct response not_found_callback(struct request req) {
 }
 
 
-typedef struct response (*uri_callback)(struct request);
+//typedef struct response (*uri_callback)(struct request);
 static struct {
     uri_callback index_callback;
     uri_callback favicon_callback;
@@ -158,6 +158,52 @@ static struct {
     .favicon_callback = favicon_callback,
     .not_found_callback = not_found_callback,
 };
+
+struct uri_callback_map {
+    char *uri;
+    uri_callback callback;
+};
+
+static struct uri_callback_map *ucls;
+static int callbacks_count = 0;
+
+void register_uri_callback(char *uri, uri_callback callback) {
+    if (strcmp(uri, "/") == 0) {
+        global.index_callback = callback;
+    } else if (strcmp(uri, "/favicon.ico") == 0) {
+        global.favicon_callback = callback;
+    } else {
+        ucls = realloc(ucls, sizeof(struct uri_callback_map) * (callbacks_count + 1));
+        // what about error checking?
+        struct uri_callback_map ucl = {
+            .uri = uri,
+            .callback = callback,
+        };
+        ucls[callbacks_count++] = ucl;
+    }
+}
+
+void freecallbacks() {
+    if (callbacks_count > 0) {
+        free(ucls);
+    }
+}
+
+static uri_callback get_callback(char *uri) {
+    if (strcmp(uri, "/") == 0) {
+        return global.index_callback;
+    } else if (strcmp(uri, "/favicon.ico") == 0) {
+        return global.favicon_callback;
+    } else {
+        for (int i = 0; i < callbacks_count; i++) {
+            if (strcmp(ucls[i].uri, uri) == 0) {
+                printf("found in ucls?\n");
+                return ucls[i].callback;
+            }
+        }
+    }
+    return global.not_found_callback;
+}
 
 static void serve_client(int send_sock) {
     printf("Accepting client request\n");
@@ -206,14 +252,7 @@ static void serve_client(int send_sock) {
 
         req.method = method;
 
-        struct response resp;
-        if (strcmp(uri, "/") == 0) {
-            resp = global.index_callback(req);
-        } else if (strcmp(uri, "/favicon.ico") == 0) {
-            resp = global.favicon_callback(req);
-        } else {
-            resp = global.not_found_callback(req);
-        }
+        struct response resp = get_callback(uri)(req);
 
         char response[3000];
         if (resp.headers != NULL) {
