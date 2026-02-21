@@ -14,6 +14,7 @@
 
 #define BACKLOG 10
 #define BUF_SIZE 1000
+#define CLIENT_NO_RECV_TIMEOUT 5000
 
 static struct response index_callback(struct request req) {
     (void)req;  // silence compiler warning for now
@@ -168,6 +169,19 @@ static void serve_client(int send_sock) {
     char method[50];
     char uri[50];
     char protocol[50];
+
+    // Chrome (maybe other browsers too, but at least Firefox doesn't do that) may open a TCP connection without actually sending a request,
+    // which causes child process to hang on recv, so we run poll again waiting for client to send something and timeout after 5 seconds
+    // TODO: apparently forking to handle each client is not the best approach and it is better to use event-driven approach with epoll or something like that
+    struct pollfd pfds[1];
+    pfds[0].fd = send_sock;
+    pfds[0].events = POLLIN;
+
+    int num_events = poll(pfds, 1, CLIENT_NO_RECV_TIMEOUT);
+    if (num_events == 0) {
+        printf("Client didn't send request after %d seconds - closing the connection\n", CLIENT_NO_RECV_TIMEOUT / 1000);
+        exit(0);
+    }
 
     // For now I assume that the request will be in correct format, so parsing is easier
     if ((nread = recv(send_sock, buf, sizeof buf, 0)) > 0) {
