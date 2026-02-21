@@ -16,6 +16,7 @@ struct response {
 
 typedef struct response (*uri_callback)(struct request);
 void register_uri_callback(char *, uri_callback);
+void register_not_found_callback(uri_callback);
 void freecallbacks();
 
 #endif

@@ -14,8 +14,19 @@ struct response users_callback(struct request req) {
     return resp;
 }
 
+struct response not_found_callback(struct request req) {
+    (void)req;
+    struct response resp;
+    resp.content_type = "text/html";
+    resp.status_code = 404;
+    resp.headers = NULL;
+    resp.body = "<h1>NOT_FOUND</h1>";
+    return resp;
+}
+
 int main() {
     register_uri_callback("/users", users_callback);
+    register_not_found_callback(not_found_callback);
     serve(PORT);
     freecallbacks();
 }

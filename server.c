@@ -183,6 +183,10 @@ void register_uri_callback(char *uri, uri_callback callback) {
     }
 }
 
+void register_not_found_callback(uri_callback callback) {
+    global.not_found_callback = callback;
+}
+
 void freecallbacks() {
     if (callbacks_count > 0) {
         free(ucls);
@@ -392,7 +396,7 @@ int serve(const char *port) {
                                             service, NI_MAXSERV, NI_NUMERICSERV)) == -1) {
                         // maybe we should just ignore the failure
                         close(client);
-                        fprintf(stderr, "[server]: getnameinfo: %s\n", gai_strerror(gnf));
+                        fprintf(stderr, "getnameinfo: %s\n", gai_strerror(gnf));
                         continue;
                     }
 
