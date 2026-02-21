@@ -26,7 +26,7 @@ struct response not_found_callback(struct request req) {
 
 int main() {
     register_uri_callback("/users", users_callback);
-    register_not_found_callback(not_found_callback);
+    //register_not_found_callback(not_found_callback);
     serve(PORT);
     freecallbacks();
 }
