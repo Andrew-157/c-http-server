@@ -20,6 +20,7 @@ static struct response index_callback(struct request req) {
     struct response resp;
     resp.content_type = "text/html";
     resp.status_code = 200;
+    resp.headers = NULL;
     char *html =
         "<!DOCTYPE html>\n"
         "<html lang=\"en\">\n"
@@ -80,6 +81,7 @@ static struct response favicon_callback(struct request req) {
     struct response resp;
     resp.status_code = 200;
     resp.content_type = "image/svg+xml";
+    resp.headers = "Cache-Control: public, immutable, max-age=31536000";
     resp.body = 
         "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 64 64\">"
         "<rect width=\"64\" height=\"64\" fill=\"#0d1117\" rx=\"8\"/>"
@@ -97,6 +99,7 @@ static struct response not_found_callback(struct request req) {
     struct response resp;
     resp.status_code = 404;
     resp.content_type = "text/html";
+    resp.headers = NULL;
     resp.body =
         "<!DOCTYPE html>\n"
         "<html lang=\"en\">\n"
@@ -184,6 +187,7 @@ static void serve_client(int send_sock) {
 
         request_line[j] = '\0';
         sscanf(request_line, "%s %s %s", method, uri, protocol);
+        printf("Request line: %s\n", request_line);
         free(request_line);
 
         req.method = method;
@@ -198,13 +202,19 @@ static void serve_client(int send_sock) {
         }
 
         char response[3000];
-        snprintf(response, 3000,
+        if (resp.headers != NULL) {
+            snprintf(response, 3000,
+                "HTTP/1.1 %d OK\r\nContent-Type: %s\r\nContent-Length: %ld\r\n%s\r\n\r\n%s",
+                resp.status_code, resp.content_type, strlen(resp.body), resp.headers, resp.body);
+        } else {
+            snprintf(response, 3000,
                 "HTTP/1.1 %d OK\r\nContent-Type: %s\r\nContent-Length: %ld\r\n\r\n%s",
                 resp.status_code, resp.content_type, strlen(resp.body), resp.body);
+        }
 
-        //char *response = "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 22\r\n\r\n<h1>C HTTP Server</h1>";
-        //printf("[server]: Sending response\n");
-        send(send_sock, response, sizeof(response), 0);
+        int sent = send(send_sock, response, strlen(response), 0);
+        printf("To be sent: %ld , actually sent: %d\n", strlen(response), sent);
+        printf("Sent successfully\n");
     } else if (nread == 0) {
         fprintf(stderr, "Client closed the connection\n");
     } else {
@@ -216,7 +226,6 @@ static volatile sig_atomic_t terminate = 0;
 static void signal_handler(int sig) {
     printf("Received signal %d\n", sig);  // Doesn't it spam since child processes constantly exit?
     if (sig == SIGCHLD) {
-        // reap child processes
         while (waitpid(-1, NULL, WNOHANG) > 0);
     } else {
         terminate = 1;

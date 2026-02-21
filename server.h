@@ -11,6 +11,7 @@ struct response {
     int status_code;
     char *content_type;
     char *body;
+    char *headers;
 };
 
 #endif
