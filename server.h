@@ -3,4 +3,20 @@
 
 int serve(const char *);
 
+struct request {
+    char *method;
+};
+
+struct response {
+    int status_code;
+    char *content_type;
+    char *body;
+    char *headers;
+};
+
+typedef struct response (*uri_callback)(struct request);
+void register_uri_callback(char *, uri_callback);
+void register_not_found_callback(uri_callback);
+void freecallbacks();
+
 #endif
